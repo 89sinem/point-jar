@@ -1,0 +1,2693 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Point Jar</title>
+
+<!-- installed-app bits: home-screen icon, full screen, no internet needed -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Point Jar">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7f5ee">
+
+<!-- Fraunces for the headings, Inter for everything else. If the page is
+     opened offline these simply fall back to the system fonts below. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------- palettes ----------
+     Oat & Sage is the app's own colouring and what it starts in; Blue and
+     Pink are alternatives a parent can pick. Each has a light and a dark set. */
+
+  :root, :root[data-palette="sage"] {          /* Oat & Sage — light */
+    color-scheme: light;
+    --bg: #f7f5ee;
+    --panel: #ffffff;
+    --panel-2: #f0efe4;
+    --text: #1e231c;
+    --muted: #767a6b;
+    --line: #e6e5d9;
+    --accent: #a76631;
+    --accent-soft: #f7ebda;
+    --danger: #b04539;
+    --danger-soft: #faeae5;
+    --good: #527f3f;
+    --good-soft: #ebf1e2;
+    --shadow: 0 1px 2px rgba(74,63,44,.05), 0 10px 26px rgba(74,63,44,.07);
+  }
+  :root[data-theme="dark"],
+  :root[data-palette="sage"][data-theme="dark"] {   /* Oat & Sage — dark */
+    color-scheme: dark;
+    --bg: #171a15;
+    --panel: #1f231c;
+    --panel-2: #282d24;
+    --text: #edeee4;
+    --muted: #9aa091;
+    --line: #343a30;
+    --accent: #e2a765;
+    --accent-soft: #35291a;
+    --danger: #ec7d6e;
+    --danger-soft: #37211e;
+    --good: #8fbf72;
+    --good-soft: #22301c;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  :root[data-palette="blue"] {                 /* Blue — light */
+    color-scheme: light;
+    --bg: #eef2f8;
+    --panel: #ffffff;
+    --panel-2: #e6ecf5;
+    --text: #151b24;
+    --muted: #6a7789;
+    --line: #dbe3ef;
+    --accent: #2f6fd0;
+    --accent-soft: #e2ecfb;
+    --danger: #c8455a;
+    --danger-soft: #fae7eb;
+    --good: #17806b;
+    --good-soft: #e0f2ed;
+    --shadow: 0 1px 2px rgba(24,40,66,.06), 0 10px 26px rgba(24,40,66,.08);
+  }
+  :root[data-palette="blue"][data-theme="dark"] {   /* Blue — dark */
+    color-scheme: dark;
+    --bg: #1a2230;
+    --panel: #232d3d;
+    --panel-2: #2c384a;
+    --text: #eaf0f9;
+    --muted: #a3b2c6;
+    --line: #3a4759;
+    --accent: #7fb2ff;
+    --accent-soft: #24384f;
+    --danger: #f58ba0;
+    --danger-soft: #43303a;
+    --good: #5fd6b8;
+    --good-soft: #234039;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px rgba(0,0,0,.25);
+  }
+
+  :root[data-palette="pink"] {                 /* Pink — light */
+    color-scheme: light;
+    --bg: #fbf1f4;
+    --panel: #ffffff;
+    --panel-2: #f7e8ee;
+    --text: #241a1f;
+    --muted: #857079;
+    --line: #eeddE4;
+    --accent: #c4497f;
+    --accent-soft: #fbe4ee;
+    --danger: #c2453f;
+    --danger-soft: #fbe6e3;
+    --good: #5f8a52;
+    --good-soft: #ecf2e5;
+    --shadow: 0 1px 2px rgba(80,40,60,.06), 0 10px 26px rgba(80,40,60,.08);
+  }
+  :root[data-palette="pink"][data-theme="dark"] {   /* Pink — dark */
+    color-scheme: dark;
+    --bg: #1a1116;
+    --panel: #23171d;
+    --panel-2: #2d1f26;
+    --text: #f4e7ed;
+    --muted: #b0929e;
+    --line: #3a2932;
+    --accent: #f58cb8;
+    --accent-soft: #3a1f2d;
+    --danger: #ef7a72;
+    --danger-soft: #3a2220;
+    --good: #97c47f;
+    --good-soft: #24301d;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.4);
+  }
+
+  :root {
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-title: "Fraunces", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 var(--font-body);
+    letter-spacing: -0.005em;
+    -webkit-text-size-adjust: 100%;
+    transition: background .18s ease, color .18s ease;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px 64px; }
+
+  /* parents on the left, kids on the right; stacked on a phone */
+  .columns { display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; }
+  @media (min-width: 640px) {
+    /* parents left, the question in the middle, kids right */
+    .columns { grid-template-columns: minmax(0, 265px) minmax(0, 1fr) minmax(0, 265px); }
+  }
+
+  /* Setup strip: a small side control, not part of the main app surface. */
+  .setup { margin-bottom: 16px; }
+  .setup .card { border-radius: 10px; box-shadow: none; background: transparent; }
+  .setup .card-head { padding: 8px 10px 4px; align-items: center; gap: 6px; }
+  .setup .card-head h3 { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .setup .count { font-size: 11px; }
+  .setup .people { margin: 0 10px 6px; padding: 6px; gap: 6px; min-height: 34px; border-radius: 8px; }
+  .setup .chip { padding: 3px 3px 3px 8px; gap: 4px; border-radius: 7px; }
+  .setup .chip .who { font-size: 12.5px; font-weight: 600; }
+  .setup .icon { font-size: 10px; padding: 3px 4px; border-radius: 5px; }
+  .setup .chip input.rename { max-width: 110px; padding: 3px 6px; font-size: 12.5px; border-radius: 6px; }
+  .setup .chip button.txt { padding: 3px 7px; font-size: 11px; border-radius: 6px; }
+  .setup .add-row { gap: 4px; flex: 1 1 auto; min-width: 92px; }
+  .setup .add-row input { flex: 1 1 auto; width: auto; min-width: 52px; padding: 4px 7px; font-size: 12.5px; border-radius: 7px; }
+  .setup .note { padding: 0 10px 8px; font-size: 11.5px; }
+
+  header.top { position: relative; display: flex; align-items: center; justify-content: center; padding: 4px 0 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand .jar { font-size: 38px; line-height: 1; }
+  .brand h1 {
+    font-family: var(--font-title); font-weight: 700;
+    font-size: 34px; margin: 0; letter-spacing: -.01em;
+  }
+  header.top .looks { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 8px; }
+
+  .palettes {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 8px; box-shadow: var(--shadow);
+  }
+  .swatch {
+    width: 20px; height: 20px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+  }
+  .swatch.on { border-color: var(--text); }
+  .swatch.sage { background: linear-gradient(135deg, #a76631 50%, #527f3f 50%); }
+  .swatch.blue { background: linear-gradient(135deg, #2f6fd0 50%, #17806b 50%); }
+  .swatch.pink { background: linear-gradient(135deg, #c4497f 50%, #5f8a52 50%); }
+  @media (max-width: 520px) {
+    .brand .jar { font-size: 30px; }
+    .brand h1 { font-size: 25px; }
+    header.top { padding-top: 40px; }
+  }
+
+  .theme-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 14px; font-size: 14px; font-weight: 600;
+    cursor: pointer; box-shadow: var(--shadow);
+  }
+  .theme-toggle:active { transform: translateY(1px); }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-head { display: flex; align-items: baseline; gap: 8px; padding: 14px 18px 12px; }
+  .card-head h3 { margin: 0; font-size: 16px; }
+  .count { color: var(--muted); font-size: 13px; }
+
+  /* the boxed group of names, as in the sketch */
+  .people[hidden] { display: none; }
+  .people {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin: 0 18px 14px; padding: 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2);
+    min-height: 62px; align-items: center;
+  }
+
+  .chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 11px;
+    padding: 8px 8px 8px 12px;
+  }
+  .chip { max-width: 100%; }
+  .chip .who {
+    font-weight: 600; font-size: 15px; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    border: 0; background: transparent; color: inherit;
+    font-family: inherit; padding: 2px 0; cursor: pointer;
+  }
+  /* a name is a thing you press, and it should look like one */
+  .chip { transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease; }
+  .chip:hover { transform: translateY(-2px) scale(1.04); border-color: var(--accent); box-shadow: var(--shadow); }
+  .chip:hover .who { color: var(--accent); }
+  .chip .who:active { transform: scale(.97); }
+  .chip .who:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  .chip.picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .chip.picked .who { color: var(--accent); }
+  .chip.picked .who::before { content: "✓ "; font-weight: 800; }
+
+  .tap-hint {
+    flex: 1 0 100%; margin: 0 0 2px; color: var(--muted);
+    font-size: 11.5px; font-weight: 600; letter-spacing: .02em;
+  }
+  .chip.editing { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .chip.armed { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft); }
+
+  .icon {
+    border: 0; background: transparent; color: var(--muted);
+    font-size: 14px; line-height: 1; padding: 5px 6px; border-radius: 7px; cursor: pointer;
+  }
+  .icon:hover { background: var(--panel-2); color: var(--accent); }
+  .icon.rm:hover { color: var(--danger); background: var(--danger-soft); }
+
+  .chip input.rename {
+    width: 100%; min-width: 0; max-width: 160px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 9px; font-size: 15px; font-family: inherit;
+  }
+  .chip button.txt {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .chip button.txt.save { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip button.txt.confirm { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+  /* the add field sits in the same box as the names, flowing after them */
+  .add-row { display: flex; gap: 8px; align-items: center; }
+  .add-row[hidden] { display: none; }   /* author display beats the UA hidden rule */
+  .add-row input {
+    min-width: 0; width: 130px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font-size: 15px; font-family: inherit;
+  }
+  .add-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .add-row input:disabled { opacity: .5; cursor: not-allowed; }
+  /* round + beside the group title */
+  button.add {
+    margin-left: auto; flex: 0 0 auto;
+    width: 22px; height: 22px; padding: 0;
+    border: 0; border-radius: 50%; background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  button.add:active { transform: translateY(1px); }
+  button.add:disabled { opacity: .35; cursor: not-allowed; }
+  button.add.open { background: var(--muted); }
+
+  button.ok {
+    flex: 0 0 auto; border: 0; border-radius: 7px;
+    background: var(--accent); color: #fff;
+    padding: 4px 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+
+  .note { color: var(--muted); font-size: 13px; padding: 0 18px 14px; margin: -6px 0 0; min-height: 0; }
+  .note.warn { color: var(--danger); }
+  .note:empty { display: none; }
+
+  /* ---------- who is using the jar ---------- */
+
+  /* the live question, centred between the two boxes */
+  .ask-area {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; text-align: center; padding: 4px 8px; min-height: 10px;
+  }
+  /* keeps its column once answered, so the two boxes stay left and right */
+  .ask-area .ask-q { font-family: var(--font-title); font-weight: 600; font-size: 18px; }
+  .ask-area .who-picks { justify-content: center; }
+  .ask-area .who-pick { font-size: 14px; padding: 6px 16px; }
+
+  /* sits inside the PARENTS box, just under its title */
+  .who-bar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    padding: 0 10px 6px;
+  }
+  .who-bar[hidden] { display: none; }
+  .who-q { font-size: 12.5px; font-weight: 700; }
+  .who-picks { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  .who-pick {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
+  .who-pick:hover { border-color: var(--accent); color: var(--accent); }
+  .who-pick.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .who-switch {
+    border: 0; background: transparent; color: var(--accent);
+    font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; padding: 2px 3px;
+  }
+
+  /* ---------- week ---------- */
+
+  .week { margin: 18px 0; padding: 20px 18px 24px; }
+  .week-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .week-when { flex: 1; min-width: 0; text-align: center; }
+  .week-when h2 {
+    margin: 0; font-family: var(--font-title); font-weight: 600;
+    font-size: 20px; letter-spacing: -.005em;
+  }
+  .week-range { color: var(--muted); font-size: 13px; }
+
+  .wk-btn {
+    flex: 0 0 auto;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 9px; padding: 7px 11px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .wk-btn:hover { border-color: var(--accent); color: var(--accent); }
+  /* keeps its space so the title stays centred while it is not needed */
+  .wk-btn.off { visibility: hidden; }
+
+  .wk-picker { flex: 0 0 auto; }
+  .wk-picker select {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 7px 9px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    max-width: 190px;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* the week's running totals, under the days */
+  .week-totals {
+    display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+    gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
+  }
+  .week-totals:empty { display: none; }
+  .wt-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 999px; padding: 7px 14px;
+    font-size: 14px; font-weight: 800; color: #fff;
+  }
+  .wt-pill .face { font-size: 15px; }
+  .wt-pill.up { background: var(--good); }
+  .wt-pill.down { background: var(--danger); }
+  .wt-word { color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+
+  /* the weekly goal, counted from the 🙂 side only */
+  .reward { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .reward[hidden] { display: none; }
+  .rw-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .rw-gift { font-size: 20px; line-height: 1; }
+  .rw-head strong { font-family: var(--font-title); font-weight: 600; font-size: 16px; }
+  .rw-target { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .rw-target input {
+    width: 58px; background: var(--panel-2); color: var(--accent); font-family: inherit;
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px;
+    font-size: 15px; font-weight: 800; text-align: center;
+    -moz-appearance: textfield; appearance: textfield;   /* no spinner arrows */
+  }
+  .rw-target input::-webkit-outer-spin-button,
+  .rw-target input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .rw-target input:hover { border-color: var(--accent); }
+  .rw-target input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .rw-state { margin-left: auto; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  .rw-state.done { color: var(--good); }
+
+  /* a plain left-to-right run from nothing to the target, with the gift at the
+     finish line so the direction of travel is obvious */
+  .rw-track {
+    position: relative; height: 16px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .rw-fill {
+    height: 100%; width: 0; border-radius: 999px; background: var(--good);
+    transition: width .25s ease;
+  }
+  .rw-goal {
+    position: absolute; left: 100%; top: 50%; margin-left: -8px; transform: translateY(-50%);
+    font-size: 15px; line-height: 1; filter: grayscale(1); opacity: .5;
+    transition: filter .2s ease, opacity .2s ease, transform .2s ease;
+  }
+  .rw-goal.lit { filter: none; opacity: 1; transform: translateY(-50%) scale(1.25); }
+
+  /* the taken side, drawn the same way right below so the two lengths compare */
+  .rw-track.down { margin-top: 4px; }
+  .rw-fill.down { background: var(--danger); }
+
+  .rw-row { display: flex; align-items: center; gap: 6px; margin: 4px 0 8px; font-size: 12px; font-weight: 800; }
+  .rw-face { font-size: 13px; }
+  .rw-num.up { color: var(--good); }
+  .rw-num.down { color: var(--danger); }
+
+
+  .chart { position: relative; }
+  .chart.blank .days { opacity: .55; }
+  .no-data {
+    position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+    margin: 0; padding: 7px 14px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--line);
+    color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  .no-data[hidden] { display: none; }
+
+  /* one column per day, bars growing from a shared baseline */
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+  .track {
+    position: relative; width: 100%; height: 132px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    display: flex; align-items: flex-end; gap: 4px; padding: 0 6px; overflow: hidden;
+  }
+  .bar {
+    flex: 1 1 0; min-width: 0; border-radius: 6px 6px 0 0;
+    min-height: 3px; transition: height .18s ease;
+  }
+  .bar.up { background: var(--good); }
+  .bar.down { background: var(--danger); }
+  .bar.zero { background: var(--line); }
+
+  .day:not(.future) { cursor: pointer; }
+  .day.picked .track { border-color: var(--text); box-shadow: 0 0 0 2px var(--line); }
+  .day.today.picked .track { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .day:focus { outline: none; }
+  .day:focus-visible .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .val {
+    position: absolute; top: 5px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 6px;
+    font-size: 11.5px; font-weight: 800;
+  }
+  .val .v-up { color: var(--good); }
+  .val .v-down { color: var(--danger); }
+
+  .day-name { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .day-date { font-size: 11.5px; color: var(--muted); margin-top: -4px; }
+
+  .day.today .track { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .day.today .day-name { color: var(--accent); }
+  .day.future .track { opacity: .5; }
+
+  @media (max-width: 520px) {
+    .week { padding: 14px 10px 16px; }
+    .days { gap: 4px; }
+    .track { height: 108px; }
+    .day-name { font-size: 10.5px; }
+    .day-date { font-size: 10px; }
+    .week-head { flex-wrap: wrap; }
+  }
+
+  /* ---------- the selected day ---------- */
+
+  .day-panel { padding: 18px 18px 22px; }
+  .day-panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .day-panel-head h3 {
+    margin: 0; font-family: var(--font-title); font-weight: 600; font-size: 18px;
+  }
+  .day-total { color: var(--muted); font-size: 13px; font-weight: 700; flex: 1; }
+  .day-total.plus { color: var(--good); }
+  .day-total.minus { color: var(--danger); }
+
+  .titles-btn {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 9px; padding: 7px 11px; font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
+  .titles-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .titles-menu {
+    border: 1px solid var(--line); background: var(--panel-2);
+    border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+  }
+  .titles-menu[hidden] { display: none; }
+  .menu-hint { margin: 0 0 8px; color: var(--muted); font-size: 12.5px; }
+  .menu-list {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: 2px 14px; max-height: 340px; overflow-y: auto;
+  }
+  .menu-row { display: flex; align-items: center; gap: 8px; padding: 4px 2px; font-size: 13.5px; }
+  .menu-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu-row input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .menu-row .kill {
+    border: 0; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 12px; padding: 2px 5px; border-radius: 6px;
+  }
+  .menu-row .kill:hover { color: var(--danger); background: var(--danger-soft); }
+  .menu-row .kill.armed { background: var(--danger); color: #fff; font-weight: 700; }
+  .menu-row .row-main {
+    display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+    cursor: grab; touch-action: none;
+  }
+  .menu-row.lifted { background: var(--accent-soft); border-radius: 8px; }
+  body.row-dragging { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+  body.row-dragging .row-main { cursor: grabbing; }
+  body.row-dragging .menu-section { outline: 1px dashed var(--line); outline-offset: 3px; border-radius: 6px; }
+  .menu-row.editing { gap: 5px; flex-wrap: wrap; }
+  .menu-row input.t-emoji, .menu-row input.t-name {
+    background: var(--panel); color: var(--text); font-family: inherit;
+    border: 1px solid var(--line); border-radius: 7px; padding: 4px 6px; font-size: 13px;
+  }
+  .menu-row input.t-emoji { width: 42px; text-align: center; }
+  .menu-row input.t-name { flex: 1; min-width: 0; }
+  .menu-row .t-btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 7px; padding: 4px 8px; font-size: 12px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
+  .menu-row .t-btn.save { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .menu-row select.t-group {
+    background: var(--panel); color: var(--text); font-family: inherit;
+    border: 1px solid var(--line); border-radius: 7px; padding: 3px 5px; font-size: 12px;
+  }
+
+  .menu-section {
+    grid-column: 1 / -1;
+    margin: 8px 0 2px; font-size: 11px; font-weight: 800;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+  }
+  .menu-section:first-child { margin-top: 0; }
+  .menu-section { display: flex; align-items: center; gap: 10px; }
+  .ask-more {
+    border: 1px solid var(--line); background: var(--panel); color: var(--accent);
+    border-radius: 999px; padding: 3px 10px; cursor: pointer;
+    font-size: 10.5px; font-weight: 700; font-family: inherit;
+    letter-spacing: 0; text-transform: none;
+  }
+  .ask-more:hover { border-color: var(--accent); }
+  .ask-more.open { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* the running score on a card — given and taken, kept apart */
+  .tally { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+  .tally span {
+    border-radius: 999px; padding: 2px 7px; font-size: 11.5px; font-weight: 800; color: #fff;
+  }
+  .tally .t-up { background: var(--good); }
+  .tally .t-down { background: var(--danger); }
+
+  .mark { position: relative; }
+
+  h4.section {
+    margin: 26px 0 10px; font-size: 11.5px; font-weight: 800;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+  }
+  h4.section:first-child { margin-top: 4px; }
+
+  .restore {
+    margin-top: 8px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--text); border-radius: 9px; padding: 6px 10px;
+    font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .restore[hidden] { display: none; }
+  .restore:hover { border-color: var(--accent); color: var(--accent); }
+  .restore.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .menu-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .menu-add { display: flex; gap: 8px; margin-top: 10px; }
+  .menu-add input {
+    flex: 1; min-width: 0; background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 8px 10px; font-size: 13.5px; font-family: inherit;
+  }
+  .add-title {
+    border: 0; background: var(--accent); color: #fff; border-radius: 9px;
+    padding: 8px 12px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+
+  /* icon picker */
+  .picker {
+    border: 1px solid var(--line); background: var(--panel-2);
+    border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+  }
+  .picker[hidden] { display: none; }
+  .picker-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13.5px; }
+  .picker-head strong { flex: 1; min-width: 0; }
+  .picker-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 4px; max-height: 200px; overflow-y: auto;
+  }
+  .picker-grid button {
+    border: 1px solid transparent; background: var(--panel); border-radius: 9px;
+    font-size: 20px; line-height: 1; padding: 6px 0; cursor: pointer;
+  }
+  .picker-grid button:hover { border-color: var(--accent); }
+  .picker-grid button.on { border-color: var(--accent); background: var(--accent-soft); }
+
+  .picker-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .upload {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 9px; padding: 7px 11px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .upload:hover { border-color: var(--accent); color: var(--accent); }
+  .upload input { display: none; }
+  .upload-hint { color: var(--muted); font-size: 12px; }
+
+  .mark .emo img, .menu-row img.ico, .picker-head img {
+    width: 1em; height: 1em; object-fit: cover; border-radius: 6px; vertical-align: -0.12em;
+  }
+  .mark .emo { cursor: pointer; }
+
+
+  /* one card per title: big emoji, name under it, the three states at the foot */
+  .marks {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px;
+  }
+  .mark {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--panel-2); padding: 14px 10px 10px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .mark .emo { font-size: 38px; line-height: 1.1; }
+  .mark .label {
+    font-size: 13.5px; font-weight: 600; text-align: center; line-height: 1.3;
+    letter-spacing: -0.01em;
+    min-height: 2.5em; display: flex; align-items: center;
+  }
+
+  .mark.up { border-color: var(--good); background: var(--good-soft); }
+  .mark.down { border-color: var(--danger); background: var(--danger-soft); }
+  .mark.both { border-color: var(--muted); }
+  .mark.off { background: var(--panel-2); }
+  .mark.off .emo { filter: grayscale(1); opacity: .4; }
+  .mark.off .label { opacity: .45; }
+
+  .states { display: flex; gap: 6px; margin-top: auto; }
+  .state {
+    width: 36px; height: 32px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    font-size: 16px; line-height: 1; display: grid; place-items: center; padding: 0;
+  }
+  .state:hover { border-color: var(--accent); }
+  .state.on.up { background: var(--good); border-color: var(--good); }
+  .state.on.down { background: var(--danger); border-color: var(--danger); }
+  .state.on.skip { background: var(--muted); border-color: var(--muted); }
+
+  /* the one title that wipes a whole day */
+  /* its own card, with air around it */
+  .redline {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 18px; padding: 16px 18px;
+  }
+  .redline[hidden] { display: none; }
+  .redline .rl-flag { font-size: 26px; line-height: 1; }
+  .rl-words { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .rl-words strong { font-family: var(--font-title); font-weight: 600; font-size: 17px; }
+  .rl-sub { color: var(--muted); font-size: 12.5px; }
+  .rl-btn {
+    flex: 0 0 auto; border: 1px solid var(--danger); background: var(--panel);
+    color: var(--danger); border-radius: 10px; padding: 8px 14px;
+    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .rl-btn:hover:not(:disabled) { background: var(--danger-soft); }
+  .rl-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .redline.on { border-color: var(--danger); background: var(--danger-soft); }
+  .rl-btn.reverse { border-color: var(--line); color: var(--text); }
+  .rl-btn.reverse:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .rl-btn[hidden] { display: none; }
+  .redline .rl-btn { margin-left: 0; }
+
+  /* three warnings; the third pulls the line by itself */
+  .strikes { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .strike {
+    width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 2px solid var(--line); background: var(--panel); color: var(--muted);
+    font-family: inherit; font-size: 13px; font-weight: 800; line-height: 1;
+    display: grid; place-items: center;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  }
+  .strike:hover:not(:disabled) { transform: scale(1.08); border-color: var(--danger); color: var(--danger); }
+  .strike.hit { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .strike:disabled { opacity: .45; cursor: not-allowed; }
+  .strike-label { color: var(--muted); font-size: 12px; font-weight: 700; margin-right: 2px; }
+  .redline.on .rl-btn { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+  .day.voided .track { border-color: var(--danger); }
+  .val .v-void { color: var(--danger); }
+
+  .day-note { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+
+  /* an earlier day is a record, not something to change */
+  .day-panel.locked .state { opacity: .5; cursor: not-allowed; }
+  .day-panel.locked .state.on { opacity: 1; }
+  .day-panel.locked .mark { background: var(--panel); }
+
+  @media (max-width: 520px) {
+    .marks { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 8px; }
+    .mark { padding: 11px 7px 9px; }
+    .mark .emo { font-size: 30px; }
+    .mark .label { font-size: 12px; }
+    .state { width: 30px; height: 30px; font-size: 15px; }
+  }
+
+  /* carrying the jar between addresses and devices */
+  .backup { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .bk-btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700;
+    font-family: inherit; cursor: pointer; box-shadow: var(--shadow);
+  }
+  .bk-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .bk-btn input { display: none; }
+  .bk-note { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .bk-note.warn { color: var(--danger); }
+
+  .foot { color: var(--muted); font-size: 13px; text-align: center; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand"><span class="jar">🫙</span><h1>Point Jar</h1></div>
+    <div class="looks">
+      <div class="palettes" id="palettes" role="group" aria-label="Colour palette"></div>
+      <button class="theme-toggle" id="themeBtn" type="button" aria-live="polite"></button>
+    </div>
+  </header>
+
+  <div class="columns setup">
+
+  <section class="card">
+    <div class="card-head">
+      <h3>Parents</h3><span class="count" id="parentsCount"></span>
+      <button class="add" id="parentsAdd" type="button" title="Add parent" aria-label="Add parent">+</button>
+    </div>
+    <div class="who-bar" id="parentsWho" hidden>
+      <span class="who-q" id="parentsWhoQ"></span>
+      <div class="who-picks" id="parentsWhoPicks"></div>
+    </div>
+    <div class="people" id="parentsBox">
+      <div class="add-row" id="parentsAddRow" hidden>
+        <input type="text" id="parentsInput" placeholder="Parent" autocomplete="off" maxlength="40">
+        <button class="ok" id="parentsOk" type="button" title="Save" aria-label="Save">✓</button>
+      </div>
+    </div>
+    <p class="note" id="parentsNote"></p>
+  </section>
+
+  <div class="ask-area" id="askArea"></div>
+
+  <section class="card">
+    <div class="card-head">
+      <h3>Kids</h3><span class="count" id="kidsCount"></span>
+      <button class="add" id="kidsAdd" type="button" title="Add kid" aria-label="Add kid">+</button>
+    </div>
+    <div class="who-bar" id="kidsWho" hidden>
+      <span class="who-q" id="kidsWhoQ"></span>
+      <div class="who-picks" id="kidsWhoPicks"></div>
+    </div>
+    <div class="people" id="kidsBox">
+      <div class="add-row" id="kidsAddRow" hidden>
+        <input type="text" id="kidsInput" placeholder="Kid" autocomplete="off" maxlength="40">
+        <button class="ok" id="kidsOk" type="button" title="Save" aria-label="Save">✓</button>
+      </div>
+    </div>
+    <p class="note" id="kidsNote"></p>
+  </section>
+
+  </div>
+
+  <section class="week card" id="weekCard">
+    <div class="week-head">
+      <label class="wk-picker" id="weekPickerWrap" hidden>
+        <span class="sr">Go to an earlier week</span>
+        <select id="weekPicker"></select>
+      </label>
+      <div class="week-when">
+        <h2 id="weekTitle"></h2>
+        <span class="week-range" id="weekRange"></span>
+      </div>
+      <button class="wk-btn off" id="currentWeekBtn" type="button">Current week</button>
+    </div>
+
+    <div class="chart">
+      <div class="days" id="days"></div>
+      <p class="no-data" id="noData" hidden>No points recorded this week</p>
+    </div>
+
+    <div class="week-totals" id="weekTotals"></div>
+
+    <div class="reward" id="reward" hidden>
+      <div class="rw-head">
+        <span class="rw-gift">🎁</span>
+        <strong>Reward</strong>
+        <label class="rw-target">
+          <span>at</span>
+          <input type="number" id="rewardTarget" min="1" step="1" inputmode="numeric">
+          <span>🙂 points</span>
+        </label>
+        <span class="rw-state" id="rewardState"></span>
+      </div>
+      <div class="rw-track">
+        <div class="rw-fill" id="rewardFill"></div>
+        <span class="rw-goal" id="rewardGoal">🎁</span>
+      </div>
+      <div class="rw-row"><span class="rw-face">🙂</span><span class="rw-num up" id="rewardNow"></span></div>
+
+      <div class="rw-track down">
+        <div class="rw-fill down" id="rewardDownFill"></div>
+      </div>
+      <div class="rw-row"><span class="rw-face">🙁</span><span class="rw-num down" id="rewardDown"></span></div>
+    </div>
+  </section>
+
+  <section class="redline card" id="redline" hidden>
+    <span class="rl-flag">🚩</span>
+    <div class="rl-words">
+      <strong>Red Line</strong>
+      <span class="rl-sub" id="redlineSub"></span>
+    </div>
+    <div class="strikes" id="strikes" role="group" aria-label="Strikes"></div>
+    <button class="rl-btn" id="redlineBtn" type="button"></button>
+    <button class="rl-btn reverse" id="redlineReverse" type="button" hidden>↩ Reverse</button>
+  </section>
+
+  <section class="day-panel card" id="dayPanel">
+      <div class="day-panel-head">
+        <h3 id="dayHeading"></h3>
+        <span class="day-total" id="dayTotal"></span>
+        <button class="titles-btn" id="titlesBtn" type="button" aria-expanded="false">Titles ▾</button>
+      </div>
+
+      <div class="titles-menu" id="titlesMenu" hidden>
+        <p class="menu-hint">Drag a title to reorder it or move it to another section. ✏️ to edit, ✕ to remove.</p>
+        <div class="menu-list" id="titlesList"></div>
+        <div class="menu-add">
+          <input type="text" id="newTitle" placeholder="Your own title" autocomplete="off" maxlength="40">
+          <button class="add-title" id="addTitle" type="button">Add title</button>
+        </div>
+        <div class="menu-tools">
+          <button class="restore" id="resetOrder" type="button">Put titles back as they were</button>
+          <button class="restore" id="restoreTitles" type="button" hidden></button>
+        </div>
+      </div>
+
+      <div class="picker" id="picker" hidden>
+        <div class="picker-head">
+          <strong id="pickerFor"></strong>
+          <button class="titles-btn" id="pickerClose" type="button">Close</button>
+        </div>
+        <div class="picker-grid" id="pickerGrid"></div>
+        <div class="picker-foot">
+          <label class="upload">
+            Upload a picture
+            <input type="file" id="pickerFile" accept="image/*">
+          </label>
+          <span class="upload-hint">PNG or JPG — it is shrunk and kept on this device.</span>
+        </div>
+      </div>
+
+      <div id="marks"></div>
+  </section>
+
+  <div class="backup">
+    <button class="bk-btn" id="backupBtn" type="button">⬇ Backup</button>
+    <label class="bk-btn">
+      ⬆ Restore
+      <input type="file" id="restoreFile" accept="application/json,.json">
+    </label>
+    <span class="bk-note" id="backupNote"></span>
+  </div>
+
+  <p class="foot">Saved on this device only. Nothing is sent anywhere.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE = "pointJar.v1";
+  var THEME_KEY = "pointJar.theme";
+  var PALETTE_KEY = "pointJar.palette";
+  var KINDS = ["parents", "kids"];
+
+  /* ---------- dates ---------- */
+
+  var DAY_MS = 86400000;
+  var DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function midnight(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+  // Monday of the week that `d` falls in.
+  function weekStart(d) {
+    var m = midnight(d);
+    var shift = (m.getDay() + 6) % 7;      // Sun=0 -> 6, Mon=1 -> 0
+    m.setDate(m.getDate() - shift);
+    return m;
+  }
+
+  function addDays(d, n) {
+    var c = midnight(d);
+    c.setDate(c.getDate() + n);
+    return c;
+  }
+
+  function ymd(d) {
+    var m = midnight(d);
+    return m.getFullYear() + "-" +
+           String(m.getMonth() + 1).padStart(2, "0") + "-" +
+           String(m.getDate()).padStart(2, "0");
+  }
+
+  function fromYmd(s) {
+    var p = String(s).split("-");
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+
+  function shortDate(d) { return d.getDate() + " " + MONTHS[d.getMonth()]; }
+
+  function rangeLabel(monday) {
+    var sunday = addDays(monday, 6);
+    var right = shortDate(sunday) +
+      (sunday.getFullYear() !== new Date().getFullYear() ? " " + sunday.getFullYear() : "");
+    return shortDate(monday) + " – " + right;
+  }
+
+  /* ---------- titles ---------- */
+
+  var SECTIONS = ["Routine", "Activities", "School", "Behaviour", "Other"];
+
+  var DEFAULT_TITLES = [
+    ["Out of the bed",        "🛏️",   "Routine"],
+    ["Washing face",          "🧼",   "Routine"],
+    ["Dress up",              "👕",   "Routine"],
+    ["Breakfast",             "🥣",   "Routine"],
+    ["Brushing teeth",        "🪥",   "Routine"],
+    ["Entertainment time",    "📺",   "Activities"],
+    ["Outside time",          "🌳",   "Activities"],
+    ["Exercising time",       "🏃",   "Activities"],
+    ["Quiet time",            "🤫",   "Activities"],
+    ["Chores time",           "🧹",   "Activities"],
+    ["Bath time",             "🛁",   "Routine"],
+    ["Family time",           "👨‍👩‍👧", "Activities"],
+    ["Pet time",              "🐶",   "Activities"],
+    ["Sibling time",          "🧒",   "Activities"],
+    ["Learning practice time","🧠",   "School"],
+    ["Homework time",         "📝",   "School"],
+    ["Reading time",          "📖",   "School"],
+    ["Journaling time",       "📓",   "School"],
+    ["Ready for bed time",    "🌙",   "Routine"],
+    ["Behaviour at home",     "🏠",   "Behaviour"],
+    ["Behaviour outside",     "🌍",   "Behaviour"],
+    ["Behaviour at school",   "🏫",   "Behaviour"]
+  ];
+
+  function seedTitles() {
+    return DEFAULT_TITLES.map(function (t, i) {
+      return { id: "t" + (i + 1), name: t[0], emoji: t[1], group: t[2], on: true, stock: true };
+    });
+  }
+
+  // Titles saved before sections existed get their standard section back.
+  function fixGroups(titles) {
+    titles.forEach(function (t) {
+      delete t.weight;                 // points are counted by tapping now
+
+      if (SECTIONS.indexOf(t.group) !== -1) return;
+      var i = /^t(\d+)$/.exec(t.id);
+      t.group = (i && DEFAULT_TITLES[i[1] - 1]) ? DEFAULT_TITLES[i[1] - 1][2] : "Other";
+    });
+    return titles;
+  }
+
+  /* ---------- data ---------- */
+
+  var data = load();
+  save();                    // pins the start date on the very first visit
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && Array.isArray(d.parents) && Array.isArray(d.kids)) {
+          if (!d.points || typeof d.points !== "object") d.points = {};
+          // points are stored per kid: points[kidId][YYYY-MM-DD] = number
+          Object.keys(d.points).forEach(function (k) {
+            if (typeof d.points[k] !== "object" || d.points[k] === null) delete d.points[k];
+          });
+          if (!Array.isArray(d.titles) || !d.titles.length) d.titles = seedTitles();
+          fixGroups(d.titles);
+          d.titles.forEach(function (t) { t.on = true; });   // every title is shown
+          if (!d.marks || typeof d.marks !== "object") d.marks = {};
+          if (!d.more || typeof d.more !== "object") d.more = {};
+          if (!d.redLine || typeof d.redLine !== "object") d.redLine = {};
+          if (!d.strikes || typeof d.strikes !== "object") d.strikes = {};
+          if (!d.reward || typeof d.reward !== "object") d.reward = {};
+          if (!d.startedOn) d.startedOn = ymd(new Date());
+          return d;
+        }
+      }
+    } catch (e) {}
+    return {
+      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {},
+      titles: seedTitles(), startedOn: ymd(new Date())
+    };
+  }
+
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) {}
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // Same name twice in one group is always a mistake — that is how a rename
+  // ends up looking like it "added the new one next to the old one".
+  function taken(kind, name, exceptId) {
+    var key = name.trim().toLowerCase();
+    return data[kind].some(function (p) {
+      return p.id !== exceptId && p.name.trim().toLowerCase() === key;
+    });
+  }
+
+  /* ---------- theme ---------- */
+
+  var root = document.documentElement;
+  var themeBtn = document.getElementById("themeBtn");
+
+  function systemTheme() {
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark" : "light";
+  }
+
+  var stored = null;
+  try { stored = localStorage.getItem(THEME_KEY); } catch (e) {}
+  applyTheme(stored === "dark" || stored === "light" ? stored : systemTheme());
+
+  function applyTheme(mode) {
+    root.setAttribute("data-theme", mode);
+    themeBtn.textContent = mode === "dark" ? "☀️ Bright" : "🌙 Dark";
+    themeBtn.setAttribute("aria-label", mode === "dark" ? "Switch to bright mode" : "Switch to dark mode");
+  }
+
+  themeBtn.addEventListener("click", function () {
+    var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  });
+
+  /* ---------- palette ---------- */
+
+  // Oat & Sage is the app's own look and what it starts in; the other two are
+  // there for a parent who wants something different.
+  var PALETTES = [
+    { id: "sage", name: "Oat & Sage" },
+    { id: "blue", name: "Blue" },
+    { id: "pink", name: "Pink" }
+  ];
+
+  var paletteBox = document.getElementById("palettes");
+  var palette = "sage";
+  try {
+    var savedPalette = localStorage.getItem(PALETTE_KEY);
+    if (savedPalette && PALETTES.some(function (p) { return p.id === savedPalette; })) {
+      palette = savedPalette;
+    }
+  } catch (e) {}
+
+  function applyPalette(id, remember) {
+    palette = id;
+    root.setAttribute("data-palette", id);
+    if (remember) { try { localStorage.setItem(PALETTE_KEY, id); } catch (e) {} }
+
+    paletteBox.textContent = "";
+    PALETTES.forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch " + p.id + (p.id === palette ? " on" : "");
+      b.title = p.name;
+      b.setAttribute("aria-label", p.name);
+      b.setAttribute("aria-pressed", p.id === palette ? "true" : "false");
+      b.addEventListener("click", function () { applyPalette(p.id, true); });
+      paletteBox.appendChild(b);
+    });
+  }
+
+  applyPalette(palette, false);
+
+  // Follow the phone/computer setting until the user picks a side themselves.
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onSys = function () {
+      var picked = null;
+      try { picked = localStorage.getItem(THEME_KEY); } catch (e) {}
+      if (picked !== "dark" && picked !== "light") applyTheme(systemTheme());
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onSys);
+    else if (mq.addListener) mq.addListener(onSys);
+  }
+
+  /* ---------- ui state ---------- */
+
+  // One editing target and one remove-armed target for the whole page, so a
+  // second Edit or Remove elsewhere always cancels the first cleanly.
+  var editing = null;   // { kind, id, draft }
+  var arming = null;    // { kind, id }
+  var adding = null;    // kind whose "+" field is open
+  var notes = {};       // per-card message
+
+  var el = {};
+  KINDS.forEach(function (kind) {
+    el[kind] = {
+      box: document.getElementById(kind + "Box"),
+      addRow: document.getElementById(kind + "AddRow"),
+      count: document.getElementById(kind + "Count"),
+      input: document.getElementById(kind + "Input"),
+      add: document.getElementById(kind + "Add"),
+      ok: document.getElementById(kind + "Ok"),
+      note: document.getElementById(kind + "Note")
+    };
+    notes[kind] = null;
+  });
+
+  var wordFor = { parents: "parent", kids: "kid" };
+
+  function setNote(kind, text, warn) {
+    notes[kind] = text ? { text: text, warn: !!warn } : null;
+  }
+
+  function clearEdit() { editing = null; }
+
+  /* ---------- rendering ---------- */
+
+  function render() {
+    KINDS.forEach(function (kind) {
+      var ui = el[kind];
+      var items = data[kind];
+
+      // Redraw only the chips and the hint; the add field is a permanent part
+      // of the box and always sits right after the last name.
+      Array.prototype.slice.call(ui.box.querySelectorAll(".chip, .tap-hint")).forEach(function (c) {
+        ui.box.removeChild(c);
+      });
+
+      if (items.length) {
+        var hint = document.createElement("p");
+        hint.className = "tap-hint";
+        hint.textContent = "Tap a name to use it";
+        ui.box.insertBefore(hint, ui.box.firstChild);
+      }
+      ui.count.textContent = items.length ? items.length : "";
+
+      items.forEach(function (item) {
+        ui.box.insertBefore(
+          editing && editing.kind === kind && editing.id === item.id
+            ? editChip(kind, item)
+            : viewChip(kind, item),
+          ui.addRow
+        );
+      });
+
+      // While a name is being edited, its own card cannot also add someone —
+      // that was the path that produced a duplicate instead of a rename.
+      var locked = !!(editing && editing.kind === kind);
+      var open = adding === kind && !locked;
+
+      ui.addRow.hidden = !open;
+      ui.add.disabled = locked;
+      ui.add.classList.toggle("open", open);
+      ui.add.textContent = open ? "×" : "+";
+      if (!open) ui.input.value = "";
+
+      // Only warnings are ever shown — no status chatter.
+      var note = notes[kind];
+      ui.note.textContent = note ? note.text : "";
+      ui.note.className = "note" + (note ? " warn" : "");
+    });
+
+    if (editing) {
+      var live = el[editing.kind].box.querySelector("input.rename");
+      if (live && document.activeElement !== live) { live.focus(); live.select(); }
+    } else if (adding) {
+      var field = el[adding].input;
+      if (document.activeElement !== field) field.focus();
+    }
+
+    renderWho();
+    if (weekReady) renderWeek();   // a kid added, renamed or removed shows up here
+  }
+
+  function viewChip(kind, item) {
+    var chip = document.createElement("div");
+    var armed = !!(arming && arming.kind === kind && arming.id === item.id);
+    chip.className = "chip" + (armed ? " armed" : "");
+
+    // The name itself is the way to become that parent / kid.
+    var who = document.createElement("button");
+    who.type = "button";
+    who.className = "who";
+    who.textContent = item.name;
+    who.title = "Use " + item.name;
+    who.addEventListener("click", function () {
+      setActive(kind, item.id);
+      active[kind].asking = false;
+      arming = null;
+      clearEdit();
+      renderWho();
+      renderWeek();
+    });
+    chip.appendChild(who);
+
+    if (active[kind].id === item.id) chip.classList.add("picked");
+
+    if (armed) {
+      chip.appendChild(button("txt confirm", "Remove?", function () {
+        data[kind] = data[kind].filter(function (x) { return x.id !== item.id; });
+        arming = null;
+        setNote(kind, null);
+        save();
+        render();
+      }));
+      chip.appendChild(button("txt", "Keep", function () {
+        arming = null;
+        setNote(kind, null);
+        render();
+      }));
+      return chip;
+    }
+
+    chip.appendChild(iconButton("icon", "✏️", "Rename " + item.name, function () {
+      editing = { kind: kind, id: item.id, draft: item.name };
+      arming = null;
+      adding = null;
+      setNote(kind, null);
+      render();
+    }));
+    chip.appendChild(iconButton("icon rm", "✕", "Remove " + item.name, function () {
+      arming = { kind: kind, id: item.id };
+      clearEdit();
+      setNote(kind, null);
+      render();
+    }));
+    return chip;
+  }
+
+  function editChip(kind, item) {
+    var chip = document.createElement("div");
+    chip.className = "chip editing";
+
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "rename";
+    input.maxLength = 40;
+    input.autocomplete = "off";
+    input.value = editing.draft;              // survives re-renders
+    input.addEventListener("input", function () { editing.draft = input.value; });
+
+    function saveEdit() {
+      var v = input.value.trim();
+      if (!v) { setNote(kind, "A name cannot be empty.", true); render(); return; }
+      if (taken(kind, v, item.id)) {
+        setNote(kind, "There is already a " + wordFor[kind] + " called " + v + ".", true);
+        render();
+        return;
+      }
+      item.name = v;                          // renames in place, never adds
+      clearEdit();
+      setNote(kind, null);
+      save();
+      render();
+    }
+
+    function cancelEdit() {                   // discards the typing, changes nothing
+      clearEdit();
+      setNote(kind, null);
+      render();
+    }
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); saveEdit(); }
+      else if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+    });
+
+    chip.appendChild(input);
+    chip.appendChild(button("txt save", "Save", saveEdit));
+    chip.appendChild(button("txt", "Cancel", cancelEdit));
+    return chip;
+  }
+
+  function button(cls, label, fn) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = cls;
+    b.textContent = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  function iconButton(cls, glyph, label, fn) {
+    var b = button(cls, glyph, fn);
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    return b;
+  }
+
+  /* ---------- who the jar is on: one active parent, one active kid ---------- */
+
+  // Kept per device rather than in the shared data, since each phone has its
+  // own answer to "who is this".
+  var active = {};    // kind -> { id, asking, bar, q, picks }
+  var askArea = document.getElementById("askArea");
+  var asking = false;   // true once a question is on screen this render
+
+  KINDS.forEach(function (kind) {
+    active[kind] = {
+      id: null, asking: false,
+      bar: document.getElementById(kind + "Who"),
+      q: document.getElementById(kind + "WhoQ"),
+      picks: document.getElementById(kind + "WhoPicks")
+    };
+  });
+
+  function byId(kind, id) {
+    var found = null;
+    data[kind].forEach(function (p) { if (p.id === id) found = p; });
+    return found;
+  }
+
+  // Nothing is remembered between visits: opening the app always asks again.
+  function setActive(kind, id) {
+    active[kind].id = id;
+  }
+
+  // Adding or renaming someone always needs the list, whatever is chosen.
+  function showNames(kind, on) {
+    var busy = adding === kind ||
+               (editing && editing.kind === kind) ||
+               (arming && arming.kind === kind);
+    el[kind].box.hidden = !(on || busy);
+  }
+
+  function renderWho() {
+    askArea.textContent = "";
+    asking = false;                 // only one question is ever on screen
+    KINDS.forEach(renderPicker);
+  }
+
+
+  function renderPicker(kind) {
+    var a = active[kind];
+    var items = data[kind];
+
+    // Someone who has been removed cannot stay selected.
+    if (a.id && !byId(kind, a.id)) setActive(kind, null);
+
+    // With nobody on the list there is nothing to ask.
+    // The kid question waits its turn: the parent is asked first.
+    var tooEarly = kind === "kids" && data.parents.length > 0 && !active.parents.id;
+
+    if (!items.length || tooEarly) {
+      setActive(kind, null);
+      a.asking = false;
+      a.bar.hidden = true;
+      return;
+    }
+
+    a.picks.textContent = "";
+
+    // The question lives in the middle of the page, and only one is asked at a
+    // time — a parent being switched does not also re-ask about the kid.
+    // Switching is done straight on the names themselves: the list opens and a
+    // tap on a name picks it. No separate question in the middle.
+    if (a.asking && a.id) {
+      a.bar.hidden = true;
+      showNames(kind, true);
+      return;
+    }
+
+    if ((!a.id || a.asking) && !asking) {
+      asking = true;
+      a.bar.hidden = true;
+      showNames(kind, true);        // the name list is open while choosing
+
+      var q = document.createElement("p");
+      q.className = "ask-q";
+      q.textContent = "Choose " + wordFor[kind];
+
+      var picks = document.createElement("div");
+      picks.className = "who-picks";
+
+      items.forEach(function (item) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "who-pick" + (item.id === a.id ? " on" : "");
+        b.textContent = item.name;
+        b.addEventListener("click", function () {
+          setActive(kind, item.id);
+          a.asking = false;
+          renderWho();          // picking the parent brings up the kid question
+          renderWeek();
+        });
+        picks.appendChild(b);
+      });
+
+      askArea.appendChild(q);
+      askArea.appendChild(picks);
+      return;
+    }
+
+    // Nobody chosen yet, but another question is already being asked: stay quiet
+    // until it is that one's turn.
+    if (!a.id) { a.bar.hidden = true; showNames(kind, false); return; }
+
+    // Chosen: the box shows only that name and Switch. The list of names comes
+    // back when Switch is pressed (or while someone is being added).
+    a.bar.hidden = false;
+    showNames(kind, false);
+    a.q.textContent = byId(kind, a.id).name;
+    var sw = document.createElement("button");
+    sw.type = "button";
+    sw.className = "who-switch";
+    sw.textContent = "Switch";
+    sw.addEventListener("click", function () { a.asking = true; renderWho(); renderWeek(); });
+    a.picks.appendChild(sw);
+  }
+
+  /* ---------- week ---------- */
+
+  var week = {
+    title: document.getElementById("weekTitle"),
+    range: document.getElementById("weekRange"),
+    days: document.getElementById("days"),
+    chart: document.querySelector(".chart"),
+    totals: document.getElementById("weekTotals"),
+    reward: document.getElementById("reward"),
+    rewardTarget: document.getElementById("rewardTarget"),
+    rewardState: document.getElementById("rewardState"),
+    rewardFill: document.getElementById("rewardFill"),
+    rewardDownFill: document.getElementById("rewardDownFill"),
+    rewardGoal: document.getElementById("rewardGoal"),
+    rewardNow: document.getElementById("rewardNow"),
+    rewardDown: document.getElementById("rewardDown"),
+    noData: document.getElementById("noData"),
+    picker: document.getElementById("weekPicker"),
+    pickerWrap: document.getElementById("weekPickerWrap"),
+    current: document.getElementById("currentWeekBtn")
+  };
+
+  // Always offer at least this many weeks back, even before the jar has that
+  // much history, so the picker is there from day one.
+  var MIN_WEEKS_BACK = 2;
+
+  var thisMonday = weekStart(new Date());
+  var shownMonday = thisMonday;             // Monday of the week on screen
+
+  // Earlier weeks only exist back to the day the jar was first opened; there is
+  // never anything to show ahead of this week.
+  function earlierMondays() {
+    var first = weekStart(fromYmd(data.startedOn));
+    var floor = addDays(thisMonday, -7 * MIN_WEEKS_BACK);
+    if (first > floor) first = floor;
+    var out = [];
+    for (var m = addDays(thisMonday, -7); m >= first; m = addDays(m, -7)) out.push(m);
+    return out;
+  }
+
+  function isCurrentWeek() { return +shownMonday === +thisMonday; }
+
+  function oneBar(kind, value, top, label) {
+    var b = document.createElement("div");
+    b.className = "bar " + kind + (value ? "" : " zero");
+    // stops short of the top so the figures above stay readable
+    b.style.height = value ? Math.round((value / top) * 78) + "%" : "3px";
+    b.title = label;
+    return b;
+  }
+
+  function pickDay(key) {
+    return function () { selectedKey = key; renderWeek(); };
+  }
+
+  function renderWeek() {
+    var today = ymd(new Date());
+    fixSelection();
+
+    var kid = shownKid();
+    var when = isCurrentWeek() ? "This week" : "Week of " + shortDate(shownMonday);
+    week.title.textContent = kid ? kid.name + " — " + when.toLowerCase() : when;
+    week.range.textContent = rangeLabel(shownMonday);
+    week.current.classList.toggle("off", isCurrentWeek());
+
+    // dropdown of earlier weeks — hidden entirely when there are none
+    var earlier = earlierMondays();
+    week.pickerWrap.hidden = earlier.length === 0;
+    if (earlier.length) {
+      week.picker.textContent = "";
+      week.picker.appendChild(option("", "Earlier weeks…", true));
+      earlier.forEach(function (m) {
+        week.picker.appendChild(option(ymd(m), rangeLabel(m), false));
+      });
+      week.picker.value = isCurrentWeek() ? "" : ymd(shownMonday);
+    }
+
+    // the seven days, each with a given bar and a taken bar
+    var tallies = [];
+    for (var i = 0; i < 7; i++) tallies.push(dayTally(addDays(shownMonday, i)));
+
+    // One scale for both colours, so the taller bar really is the bigger number.
+    var top = Math.max(5, tallies.reduce(function (m, t) {
+      return Math.max(m, t.up, t.down);
+    }, 0));
+
+    // An empty past week is worth saying out loud; an empty current week is
+    // just a week that has not happened yet.
+    var blank = tallies.every(function (t) { return !t.marked; });
+    var sayBlank = !!kid && blank && !isCurrentWeek();
+    week.noData.textContent = "Nothing recorded this week";
+    week.noData.hidden = !sayBlank;
+    week.chart.classList.toggle("blank", sayBlank);
+
+    week.days.textContent = "";
+    for (var j = 0; j < 7; j++) {
+      var date = addDays(shownMonday, j);
+      var key = ymd(date);
+
+      var col = document.createElement("div");
+      col.className = "day" +
+        (tallies[j].void ? " voided" : "") +
+        (key === today ? " today" : "") +
+        (key === selectedKey ? " picked" : "") +
+        (fromYmd(key) > fromYmd(today) ? " future" : "");
+
+      if (!isFuture(key)) {
+        col.tabIndex = 0;
+        col.addEventListener("click", pickDay(key));
+        col.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickDay(key)(); }
+        });
+      }
+
+      var tally = tallies[j];
+
+      var track = document.createElement("div");
+      track.className = "track";
+
+      // green: points given. red: points taken. Both measured the same way.
+      track.appendChild(oneBar("up", tally.up, top, "Given " + tally.up));
+      track.appendChild(oneBar("down", tally.down, top, "Taken " + tally.down));
+
+      var val = document.createElement("span");
+      val.className = "val";
+      if (tally.void) {
+        var vv = document.createElement("span");
+        vv.className = "v-void";
+        vv.textContent = "🚩 0";
+        val.appendChild(vv);
+      }
+      if (tally.up) {
+        var vu = document.createElement("span");
+        vu.className = "v-up";
+        vu.textContent = "+" + tally.up;
+        val.appendChild(vu);
+      }
+      if (tally.down) {
+        var vd = document.createElement("span");
+        vd.className = "v-down";
+        vd.textContent = "-" + tally.down;
+        val.appendChild(vd);
+      }
+      track.appendChild(val);
+
+      var name = document.createElement("span");
+      name.className = "day-name";
+      name.textContent = DAY_NAMES[j];
+
+      var dnum = document.createElement("span");
+      dnum.className = "day-date";
+      dnum.textContent = date.getDate();
+
+      col.appendChild(track);
+      col.appendChild(name);
+      col.appendChild(dnum);
+      week.days.appendChild(col);
+    }
+
+    renderWeekTotals(tallies, !!kid);
+    renderDay();
+  }
+
+  // What the whole week adds up to, kept as two separate figures. A day the red
+  // line was pulled on brings nothing to either side.
+  function renderWeekTotals(tallies, haveKid) {
+    week.totals.textContent = "";
+    if (!haveKid) return;
+
+    var up = tallies.reduce(function (s, t) { return s + t.up; }, 0);
+    var down = tallies.reduce(function (s, t) { return s + t.down; }, 0);
+
+    var word = document.createElement("span");
+    word.className = "wt-word";
+    word.textContent = "Week total";
+    week.totals.appendChild(word);
+
+    week.totals.appendChild(totalPill("up", "🙂", "+" + up));
+    week.totals.appendChild(totalPill("down", "🙁", "-" + down));
+
+    renderReward(up, down);
+  }
+
+  // The reward is measured against the 🙂 side only — points taken never move
+  // it. Each kid has their own target, and it can be changed at any time.
+  var DEFAULT_TARGET = 25;
+
+  function rewardTarget(kidId) {
+    var n = data.reward[kidId];
+    return typeof n === "number" && n >= 1 ? n : DEFAULT_TARGET;
+  }
+
+  function renderReward(up, down) {
+    var kid = shownKid();
+    if (!kid) { week.reward.hidden = true; return; }
+
+    var target = rewardTarget(kid.id);
+
+    // What counts towards the reward is what is left after the points taken:
+    // given minus taken, and never less than nothing.
+    var net = Math.max(0, up - down);
+    var done = net >= target;
+
+    // One ruler for both bars and the target, so their lengths can be read
+    // against each other.
+    var scale = Math.max(target, up, down);
+
+    week.reward.hidden = false;
+    if (document.activeElement !== week.rewardTarget) week.rewardTarget.value = target;
+
+    week.rewardFill.style.width = Math.round((up / scale) * 100) + "%";
+    week.rewardDownFill.style.width = Math.round((down / scale) * 100) + "%";
+
+    week.rewardGoal.className = "rw-goal" + (done ? " lit" : "");
+    week.rewardGoal.style.left = Math.round((target / scale) * 100) + "%";
+
+    week.rewardNow.textContent = up + " given";
+    week.rewardDown.textContent = down + " taken";
+
+    // What is counted for the reward: given minus taken, against the target.
+    week.rewardState.className = "rw-state" + (done ? " done" : "");
+    week.rewardState.textContent = done
+      ? "🎉 Reward earned — " + net + " of " + target
+      : net + " of " + target;
+  }
+
+  function totalPill(cls, face, text) {
+    var pill = document.createElement("span");
+    pill.className = "wt-pill " + cls;
+
+    var f = document.createElement("span");
+    f.className = "face";
+    f.textContent = face;
+
+    var n = document.createElement("span");
+    n.textContent = text;
+
+    pill.appendChild(f);
+    pill.appendChild(n);
+    return pill;
+  }
+
+  // Whose jar is on screen. Points hang off the kid, so switching parent leaves
+  // the chart exactly as it was — any parent may change the same numbers.
+  function shownKid() { return active.kids.id ? byId("kids", active.kids.id) : null; }
+
+  // marks[kidId][YYYY-MM-DD][titleId] = { n: points, off: true, by: parentId }
+  //   n counts up with every 🙂 and down with every 🙁 (only past 1 where the
+  //   section allows more points); off is the ⊘ "does not apply today" state.
+  //   Older saves used { v: 1 | -1 | 0 } and are read the same way.
+  //   `up` is what 🙂 gave and `down` what 🙁 took. They are counted separately
+  //   and never cancel each other out. `off` is the ⊘ state and counts nothing.
+  function readMark(m) {
+    var r = { has: false, up: 0, down: 0, off: false };
+    if (!m) return r;
+
+    r.has = true;
+    r.off = !!(m.off || m.state === "off" || m.v === 0);
+
+    if (typeof m.up === "number" || typeof m.down === "number") {
+      r.up = m.up || 0;
+      r.down = m.down || 0;
+    } else if (m.state === "up" || m.dir === "up" || m.v > 0) {
+      r.up = 1;
+    } else if (m.state === "down" || m.dir === "down" || m.v < 0) {
+      r.down = 1;
+    }
+
+    r.has = !!(r.up || r.down || r.off);
+    return r;
+  }
+  function marksFor(kidId, key, make) {
+    var byKid = data.marks[kidId];
+    if (!byKid) { if (!make) return null; byKid = data.marks[kidId] = {}; }
+    var day = byKid[key];
+    if (!day) { if (!make) return null; day = byKid[key] = {}; }
+    return day;
+  }
+
+  // Three strikes: a warning, then another, and the third pulls the red line
+  // by itself. Taking a strike back releases the day again.
+  function strikesOn(kidId, key) {
+    var n = data.strikes[kidId] && data.strikes[kidId][key];
+    return typeof n === "number" ? n : 0;
+  }
+
+  function setStrikes(kidId, key, n) {
+    if (!data.strikes[kidId]) data.strikes[kidId] = {};
+    if (n > 0) data.strikes[kidId][key] = n;
+    else delete data.strikes[kidId][key];
+    save();
+  }
+
+  // The Red Line: a day it has been pulled on counts for nothing at all. It is
+  // pulled either by hand or by a third strike.
+  function isRedLined(kidId, key) {
+    return !!(data.redLine[kidId] && data.redLine[kidId][key]) || strikesOn(kidId, key) >= 3;
+  }
+
+  function pulledByHand(kidId, key) {
+    return !!(data.redLine[kidId] && data.redLine[kidId][key]);
+  }
+
+  function setRedLine(kidId, key, on) {
+    if (on) {
+      if (!data.redLine[kidId]) data.redLine[kidId] = {};
+      data.redLine[kidId][key] = { by: active.parents.id || null };
+    } else if (data.redLine[kidId]) {
+      delete data.redLine[kidId][key];
+    }
+    save();
+  }
+
+  // A day is two separate totals: points given (🙂) and points taken (🙁).
+  function dayTally(date) {
+    var out = { up: 0, down: 0, marked: false, void: false };
+    var kid = shownKid();
+    if (!kid) return out;
+
+    var key = ymd(date);
+    if (isRedLined(kid.id, key)) {          // everything to zero
+      out.void = true;
+      out.marked = true;
+      return out;
+    }
+
+    var day = marksFor(kid.id, key, false);
+    if (!day) return out;
+
+    Object.keys(day).forEach(function (id) {
+      var m = readMark(day[id]);
+      if (m.off) return;
+      out.up += m.up;
+      out.down += m.down;
+    });
+
+    out.marked = out.up > 0 || out.down > 0;
+    return out;
+  }
+
+  function option(value, label, disabled) {
+    var o = document.createElement("option");
+    o.value = value;
+    o.textContent = label;
+    if (disabled) { o.disabled = true; o.selected = true; }
+    return o;
+  }
+
+  /* ---------- the selected day ---------- */
+
+  var day = {
+    panel: document.getElementById("dayPanel"),
+    heading: document.getElementById("dayHeading"),
+    total: document.getElementById("dayTotal"),
+    btn: document.getElementById("titlesBtn"),
+    menu: document.getElementById("titlesMenu"),
+    list: document.getElementById("titlesList"),
+    newTitle: document.getElementById("newTitle"),
+    addTitle: document.getElementById("addTitle"),
+    restore: document.getElementById("restoreTitles"),
+    reset: document.getElementById("resetOrder"),
+    marks: document.getElementById("marks"),
+    redline: document.getElementById("redline"),
+    redlineSub: document.getElementById("redlineSub"),
+    redlineBtn: document.getElementById("redlineBtn"),
+    redlineReverse: document.getElementById("redlineReverse"),
+    strikes: document.getElementById("strikes")
+  };
+
+  // Clears the whole thing at once: strikes wiped and the line released, so the
+  // day's points come straight back.
+  day.redlineReverse.addEventListener("click", function () {
+    var kid = shownKid();
+    if (!kid || !editable()) return;
+    setStrikes(kid.id, selectedKey, 0);
+    setRedLine(kid.id, selectedKey, false);
+    renderWeek();
+  });
+
+  day.redlineBtn.addEventListener("click", function () {
+    var kid = shownKid();
+    if (!kid || !editable()) return;
+    if (strikesOn(kid.id, selectedKey) >= 3) return;   // the strikes hold it
+    setRedLine(kid.id, selectedKey, !pulledByHand(kid.id, selectedKey));
+    renderWeek();
+  });
+
+  var pick = {
+    wrap: document.getElementById("picker"),
+    forName: document.getElementById("pickerFor"),
+    grid: document.getElementById("pickerGrid"),
+    close: document.getElementById("pickerClose"),
+    file: document.getElementById("pickerFile")
+  };
+
+  pick.close.addEventListener("click", function () { picking = null; renderDay(); });
+  pick.file.addEventListener("change", function () {
+    if (pick.file.files && pick.file.files[0]) useUpload(pick.file.files[0]);
+    pick.file.value = "";
+  });
+
+  var selectedKey = ymd(new Date());       // which day the rows below belong to
+  var menuOpen = false;
+
+  function isFuture(key) { return fromYmd(key) > midnight(new Date()); }
+
+  // Keep the selection inside the week on screen, and never on a future day.
+  function fixSelection() {
+    var start = shownMonday, end = addDays(shownMonday, 6);
+    var d = fromYmd(selectedKey);
+    if (d < start || d > end) {
+      d = (+shownMonday === +thisMonday) ? midnight(new Date()) : end;
+    }
+    if (d > midnight(new Date())) d = midnight(new Date());
+    if (d < start) d = start;
+    selectedKey = ymd(d);
+  }
+
+  function longDate(d) {
+    var names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    return names[(d.getDay() + 6) % 7] + " " + shortDate(d);
+  }
+
+  function renderDay() {
+    var kid = shownKid();
+    var d = fromYmd(selectedKey);
+    var isToday = selectedKey === ymd(new Date());
+
+    day.heading.textContent = (isToday ? "Today · " : "") + longDate(d) +
+      (isToday ? "" : "  🔒");
+
+    day.panel.classList.toggle("locked", !editable());
+
+    var sum = dayTally(d);
+    day.total.textContent = !kid ? ""
+      : sum.void ? "🚩 Red Line — this day is zero"
+      : sum.marked
+        ? (sum.up ? "+" + sum.up + " given" : "") +
+          (sum.up && sum.down ? " · " : "") +
+          (sum.down ? "-" + sum.down + " taken" : "")
+        : "";
+    day.total.className = "day-total";
+
+    renderIconPicker();
+
+    day.menu.hidden = !menuOpen;
+    day.btn.setAttribute("aria-expanded", menuOpen ? "true" : "false");
+    day.btn.textContent = menuOpen ? "Titles ▴" : "Titles ▾";
+    if (menuOpen) renderTitlesMenu();
+
+    day.marks.textContent = "";
+
+    if (!kid) { day.redline.hidden = true; return; }
+
+    var strikes = strikesOn(kid.id, selectedKey);
+    var voided = isRedLined(kid.id, selectedKey);
+    var byHand = pulledByHand(kid.id, selectedKey);
+
+    day.redline.hidden = false;
+    day.redline.classList.toggle("on", voided);
+    day.redlineSub.textContent =
+      strikes >= 3 ? "Third strike — this day counts as nothing."
+      : voided ? "This day counts as nothing — every point is wiped."
+      : strikes === 1 ? "One warning given. Two more and the day is gone."
+      : strikes === 2 ? "Two warnings given. One more and the day is gone."
+      : "Three strikes pull it, or pull it straight away.";
+
+    day.redlineBtn.textContent = byHand ? "Undo" : "Pull the red line";
+    day.redlineBtn.disabled = !editable() || strikes >= 3;
+    day.redlineBtn.hidden = voided && !byHand;
+
+    // one press to undo everything — the line and any strikes behind it
+    day.redlineReverse.hidden = !(voided || strikes > 0);
+    day.redlineReverse.disabled = !editable();
+
+    // the three strike buttons
+    day.strikes.textContent = "";
+    var label = document.createElement("span");
+    label.className = "strike-label";
+    label.textContent = "Strikes";
+    day.strikes.appendChild(label);
+
+    [1, 2, 3].forEach(function (n) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "strike" + (strikes >= n ? " hit" : "");
+      b.textContent = n;
+      b.disabled = !editable();
+      b.title = strikes >= n ? "Take this strike back" : "Strike " + n;
+      b.setAttribute("aria-label", b.title);
+      b.addEventListener("click", function () {
+        if (!editable()) return;
+        setStrikes(kid.id, selectedKey, strikes >= n ? n - 1 : n);
+        renderWeek();
+      });
+      day.strikes.appendChild(b);
+    });
+
+    var shown = data.titles.filter(function (t) { return t.on; });
+    if (!shown.length) {
+      day.marks.appendChild(note("No titles switched on — open Titles and tick the ones you use."));
+      return;
+    }
+
+    var dayMarks = marksFor(kid.id, selectedKey, false) || {};
+
+    SECTIONS.forEach(function (section) {
+      var inSection = shown.filter(function (t) { return t.group === section; });
+
+      if (!inSection.length) return;      // an empty section is not drawn
+
+      var h = document.createElement("h4");
+      h.className = "section";
+      h.textContent = section;
+      day.marks.appendChild(h);
+
+      var list = document.createElement("ul");
+      list.className = "marks";
+      list.dataset.section = section;
+      day.marks.appendChild(list);
+
+      inSection.forEach(function (t) { list.appendChild(markCard(t, dayMarks)); });
+    });
+  }
+
+  function markCard(t, dayMarks) {
+      var m = readMark(dayMarks[t.id]);
+
+      var li = document.createElement("li");
+      li.className = "mark" +
+        (m.off ? " off" : m.up && m.down ? " both" : m.up ? " up" : m.down ? " down" : "");
+
+      if (!m.off && (m.up || m.down)) {
+        var tally = document.createElement("span");
+        tally.className = "tally";
+        if (m.up) {
+          var tu = document.createElement("span");
+          tu.className = "t-up";
+          tu.textContent = "+" + m.up;
+          tally.appendChild(tu);
+        }
+        if (m.down) {
+          var td = document.createElement("span");
+          td.className = "t-down";
+          td.textContent = "-" + m.down;
+          tally.appendChild(td);
+        }
+        li.appendChild(tally);
+      }
+      li.dataset.title = t.id;
+
+      var emo = document.createElement("span");
+      emo.className = "emo";
+      emo.title = "Change the icon";
+      iconInto(emo, t);
+      emo.addEventListener("click", function () {
+        picking = t.id;
+        renderDay();
+        pick.wrap.scrollIntoView({ block: "nearest" });
+      });
+
+      var label = document.createElement("span");
+      label.className = "label";
+      label.textContent = t.name;
+
+      // Nothing recorded shows nothing at all. After a 🙂 the score is green
+      // with a plus; after a 🙁 it is red with a minus, resting on a red zero.
+      var states = document.createElement("div");
+      states.className = "states";
+      states.appendChild(stateBtn("up", "🙂", 1, m, t, "Give a point"));
+      states.appendChild(stateBtn("down", "🙁", -1, m, t, "Take a point"));
+      states.appendChild(stateBtn("skip", "⊘", 0, m, t,
+        m.off ? (m.up || m.down ? "Switch back on and bring the points back" : "Switch back on")
+              : "Does not apply today"));
+
+      li.appendChild(emo); li.appendChild(label); li.appendChild(states);
+      return li;
+  }
+
+  function note(text) {
+    var p = document.createElement("p");
+    p.className = "day-note";
+    p.textContent = text;
+    return p;
+  }
+
+  function stateBtn(cls, glyph, value, m, title, label) {
+    var lit = value === 0 ? m.off : value > 0 ? (!m.off && m.up > 0) : (!m.off && m.down > 0);
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "state " + cls + (lit ? " on" : "");
+    b.textContent = glyph;
+    b.disabled = !editable();
+    b.title = editable() ? label : "Earlier days cannot be changed";
+    b.setAttribute("aria-label", label + " — " + title.name);
+    b.addEventListener("click", function () { setMark(title, value); });
+    return b;
+  }
+
+  // 🙂 adds a point, 🙁 takes one. Where the section does not allow more points
+  // each title stops at a single one, and tapping the state it already has
+  // clears it back to nothing.
+  // Only today can be changed. What a past day holds is a record of that day.
+  function editable() { return selectedKey === ymd(new Date()); }
+
+  function setMark(t, value) {
+    var kid = shownKid();
+    if (!kid || !editable()) return;
+
+    var dayMarks = marksFor(kid.id, selectedKey, true);
+    var m = readMark(dayMarks[t.id]);
+    var next;
+
+    // 🙂 and 🙁 are always counted apart — one never undoes the other.
+    // Plain sections allow one of each; a "more points" section lets a parent
+    // keep tapping either face as often as they like.
+    var many = !!data.more[t.group];
+    var up = m.off ? m.up : m.up;      // what is stored stays stored while off
+    var down = m.down;
+
+
+    if (value === 0) {
+      // ⊘ simply switches the title off and on again. Any points on the card
+      // are kept while it is off and come back untouched when it is switched
+      // on, so nothing is ever lost by tapping it.
+      if (m.off) next = (up || down) ? { up: up, down: down, off: false } : null;
+      else next = { up: up, down: down, off: true };
+    } else if (value > 0) {
+      next = { up: many ? up + 1 : (up ? 0 : 1), down: down, off: false };
+    } else {
+      next = { up: up, down: many ? down + 1 : (down ? 0 : 1), off: false };
+    }
+
+    if (next && !next.off && !next.up && !next.down) next = null;
+
+    if (next) {
+      next.by = active.parents.id || null;
+      dayMarks[t.id] = next;
+    } else {
+      delete dayMarks[t.id];
+    }
+
+    save();
+    renderWeek();
+  }
+
+  var titleEditing = null;   // id of the title open for renaming
+  var titleArmed = null;     // id of the title whose remove was tapped once
+  var picking = null;        // id of the title whose icon is being chosen
+
+  var PICKER_EMOJIS = (
+    "🛏️ 🧼 👕 🥣 🪥 📺 🌳 🏃 🤫 🧹 🛁 👨‍👩‍👧 🐶 🐱 🧒 👦 👧 🧠 📝 📖 📓 🌙 🏠 🌍 🏫 " +
+    "⭐ 🌟 ✨ 🏆 🎯 🎨 🎵 🎸 🧩 🧸 🚲 ⚽ 🏀 🏊 🧘 💪 🥕 🍎 🥦 💧 🍽️ 🧦 🧺 🚿 🪣 " +
+    "⏰ 💤 📱 💻 🎮 🗣️ 🤝 🙏 ❤️ 😊 👏 🚗 🛒 🌱 ☀️ 🌈 🔔 ✅"
+  ).split(" ");
+
+  // A title shows either an emoji or a small uploaded picture.
+  function iconInto(node, t, sizeEm) {
+    node.textContent = "";
+    if (t.img) {
+      var img = document.createElement("img");
+      img.src = t.img;
+      img.alt = "";
+      if (sizeEm) img.className = "ico";
+      node.appendChild(img);
+    } else {
+      node.textContent = t.emoji;
+    }
+  }
+
+  function titleById(id) {
+    var found = null;
+    data.titles.forEach(function (t) { if (t.id === id) found = t; });
+    return found;
+  }
+
+  function renderIconPicker() {
+    var t = picking ? titleById(picking) : null;
+    if (!t) { picking = null; pick.wrap.hidden = true; return; }
+
+    pick.wrap.hidden = false;
+    pick.forName.textContent = "";
+    var ico = document.createElement("span");
+    iconInto(ico, t);
+    pick.forName.appendChild(ico);
+    pick.forName.appendChild(document.createTextNode(" " + t.name));
+
+    pick.grid.textContent = "";
+    PICKER_EMOJIS.forEach(function (g) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = g;
+      b.className = (!t.img && t.emoji === g) ? "on" : "";
+      b.addEventListener("click", function () {
+        t.emoji = g;
+        delete t.img;
+        picking = null;
+        save();
+        renderWeek();
+      });
+      pick.grid.appendChild(b);
+    });
+  }
+
+  // Uploaded pictures are squared off and shrunk to 96px before being stored,
+  // so the browser's local storage does not fill up.
+  function useUpload(file) {
+    var t = picking ? titleById(picking) : null;
+    if (!t || !file) return;
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var size = 96;
+        var canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        var ctx = canvas.getContext("2d");
+        var side = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        try {
+          t.img = canvas.toDataURL("image/png");
+          picking = null;
+          save();
+          renderWeek();
+        } catch (e) {}
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function renderTitlesMenu() {
+    day.list.textContent = "";
+
+    SECTIONS.forEach(function (section) {
+      var inSection = data.titles.filter(function (t) { return t.group === section; });
+
+      // Empty sections keep their heading here so a row can be dropped in.
+      var h = document.createElement("h5");
+      h.className = "menu-section";
+      h.dataset.section = section;
+
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = section;
+      h.appendChild(nameSpan);
+
+      // With this ticked, 🙂 can be tapped again and again on this section's
+      // titles — each tap is one more point, and 🙁 takes one back.
+      if (inSection.length) {
+        var on = !!data.more[section];
+        var ask = document.createElement("button");
+        ask.type = "button";
+        ask.className = "ask-more" + (on ? " open" : "");
+        ask.setAttribute("aria-pressed", on ? "true" : "false");
+        ask.textContent = (on ? "✓ " : "") + "More points";
+        ask.title = on
+          ? "Tapping 🙂 again adds another point"
+          : "Allow more than one point per title";
+        ask.addEventListener("click", function () {
+          data.more[section] = !on;
+          save();
+          renderWeek();
+        });
+        h.appendChild(ask);
+      }
+
+      day.list.appendChild(h);
+
+      inSection.forEach(function (t) {
+        day.list.appendChild(t.id === titleEditing ? titleEditRow(t) : titleRow(t));
+      });
+    });
+
+    // Standard titles that were removed can always be brought back.
+    var missing = DEFAULT_TITLES.filter(function (d, i) {
+      return !data.titles.some(function (t) { return t.id === "t" + (i + 1); });
+    }).length;
+
+    day.restore.hidden = missing === 0;
+    day.restore.textContent = "Restore " + missing + " standard title" + (missing === 1 ? "" : "s");
+  }
+
+  function titleRow(t) {
+    var row = document.createElement("div");
+    row.className = "menu-row" + (dragTitle === t.id ? " lifted" : "");
+    row.dataset.title = t.id;
+
+    var lab = document.createElement("div");
+    lab.className = "row-main";
+    lab.title = "Drag to move";
+    lab.addEventListener("pointerdown", gripDown(t));   // drag the row itself
+
+    var emo = document.createElement("span");
+    iconInto(emo, t, true);
+
+    var nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = t.name;
+
+    lab.appendChild(emo); lab.appendChild(nm);
+    row.appendChild(lab);
+
+    // Move it to another section, right here in the list.
+    var sel = document.createElement("select");
+    sel.className = "t-group";
+    sel.title = "Move to another section";
+    SECTIONS.forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      if (t.group === s) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", function () {
+      t.group = sel.value;
+      save();
+      renderWeek();
+    });
+    row.appendChild(sel);
+
+    var edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "kill";
+    edit.textContent = "✏️";
+    edit.title = "Edit " + t.name;
+    edit.addEventListener("click", function () {
+      titleEditing = t.id; titleArmed = null; renderTitlesMenu();
+      var f = day.list.querySelector("input.t-name");
+      if (f) { f.focus(); f.select(); }
+    });
+    row.appendChild(edit);
+
+    var armed = titleArmed === t.id;
+    var kill = document.createElement("button");
+    kill.type = "button";
+    kill.className = "kill" + (armed ? " armed" : "");
+    kill.textContent = armed ? "remove?" : "✕";
+    kill.title = "Remove " + t.name;
+    kill.addEventListener("click", function () {
+      if (armed) {
+        data.titles = data.titles.filter(function (x) { return x.id !== t.id; });
+        titleArmed = null;
+        save();
+        renderWeek();
+      } else {
+        titleArmed = t.id; titleEditing = null; renderTitlesMenu();
+      }
+    });
+    row.appendChild(kill);
+
+    return row;
+  }
+
+
+  /* dragging a row by its ⠿ handle */
+
+  var dragTitle = null;      // id of the row being carried
+
+  function gripDown(t) {
+    return function (e) {
+      if (e.button > 0) return;
+      if (e.target.closest("input, select, button")) return;   // let controls be
+      e.preventDefault();
+
+      dragTitle = t.id;
+      var grip = e.currentTarget;
+      grip.setPointerCapture(e.pointerId);
+      document.body.classList.add("row-dragging");
+      renderTitlesMenu();
+
+      function move(ev) {
+        var under = document.elementFromPoint(ev.clientX, ev.clientY);
+        if (!under) return;
+
+        var overRow = under.closest ? under.closest(".menu-row") : null;
+        var overHead = under.closest ? under.closest(".menu-section") : null;
+
+        if (overRow && overRow.dataset.title && overRow.dataset.title !== t.id) {
+          dropOnto(t, titleById(overRow.dataset.title));
+        } else if (overHead && overHead.dataset.section) {
+          dropIntoSection(t, overHead.dataset.section);
+        }
+      }
+
+      function up(ev) {
+        grip.removeEventListener("pointermove", move);
+        grip.removeEventListener("pointerup", up);
+        grip.removeEventListener("pointercancel", up);
+        try { grip.releasePointerCapture(ev.pointerId); } catch (err) {}
+
+        dragTitle = null;
+        document.body.classList.remove("row-dragging");
+        save();
+        renderWeek();
+      }
+
+      grip.addEventListener("pointermove", move);
+      grip.addEventListener("pointerup", up);
+      grip.addEventListener("pointercancel", up);
+    };
+  }
+
+  // Put the carried title where the one under the pointer sits, taking that
+  // one's section with it.
+  function dropOnto(t, target) {
+    if (!target || t === target) return;
+    var from = data.titles.indexOf(t);
+    var to = data.titles.indexOf(target);
+    if (from < 0 || to < 0) return;
+
+    t.group = target.group;
+    data.titles.splice(from, 1);
+    data.titles.splice(data.titles.indexOf(target) + (from < to ? 1 : 0), 0, t);
+    renderTitlesMenu();
+  }
+
+  function dropIntoSection(t, section) {
+    if (t.group === section) return;
+    t.group = section;
+
+    // land at the top of that section
+    var idx = data.titles.findIndex(function (x) { return x !== t && x.group === section; });
+    data.titles.splice(data.titles.indexOf(t), 1);
+    data.titles.splice(idx < 0 ? data.titles.length : idx, 0, t);
+    renderTitlesMenu();
+  }
+
+  function titleEditRow(t) {
+    var row = document.createElement("div");
+    row.className = "menu-row editing";
+
+    var emo = document.createElement("input");
+    emo.type = "text";
+    emo.className = "t-emoji";
+    emo.value = t.img ? "🖼️" : t.emoji;
+    emo.maxLength = 4;
+    emo.disabled = !!t.img;              // a picture is changed through Icon…
+    emo.title = "Emoji";
+
+    var nm = document.createElement("input");
+    nm.type = "text";
+    nm.className = "t-name";
+    nm.value = t.name;
+    nm.maxLength = 40;
+
+    function commit() {
+      var v = nm.value.trim();
+      if (!v) { nm.focus(); return; }
+      t.name = v;
+      t.group = sel.value;
+      if (!t.img) t.emoji = emo.value.trim() || t.emoji;
+      titleEditing = null;
+      save();
+      renderWeek();
+    }
+
+    function cancel() { titleEditing = null; renderTitlesMenu(); }
+
+    [emo, nm].forEach(function (f) {
+      f.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+    });
+
+    var ok = document.createElement("button");
+    ok.type = "button";
+    ok.className = "t-btn save";
+    ok.textContent = "Save";
+    ok.addEventListener("click", commit);
+
+    var no = document.createElement("button");
+    no.type = "button";
+    no.className = "t-btn";
+    no.textContent = "Cancel";
+    no.addEventListener("click", cancel);
+
+    row.appendChild(emo); row.appendChild(nm); row.appendChild(ok); row.appendChild(no);
+
+    var sel = document.createElement("select");
+    sel.className = "t-group";
+    sel.title = "Section";
+    SECTIONS.forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      if (t.group === s) o.selected = true;
+      sel.appendChild(o);
+    });
+    row.appendChild(sel);
+
+    var iconBtn = document.createElement("button");
+    iconBtn.type = "button";
+    iconBtn.className = "t-btn";
+    iconBtn.textContent = "Icon…";
+    iconBtn.title = "Choose an emoji or upload a picture";
+    iconBtn.addEventListener("click", function () {
+      titleEditing = null;
+      picking = t.id;
+      renderDay();
+      pick.wrap.scrollIntoView({ block: "nearest" });
+    });
+    row.appendChild(iconBtn);
+
+    return row;
+  }
+
+  // Undo any dragging: the standard titles go back to their original sections
+  // and order, and titles you added yourself follow at the end. Two taps, since
+  // it throws away the arrangement.
+  var resetArmed = false;
+
+  day.reset.addEventListener("click", function () {
+    if (!resetArmed) {
+      resetArmed = true;
+      day.reset.textContent = "Tap again to put them back";
+      day.reset.classList.add("armed");
+      return;
+    }
+
+    var order = {}, groups = {};
+    seedTitles().forEach(function (std, i) { order[std.id] = i; groups[std.id] = std.group; });
+
+    data.titles.forEach(function (t) {
+      if (t.stock && groups[t.id]) t.group = groups[t.id];
+    });
+    data.titles.sort(function (a, b) {
+      var ai = a.id in order ? order[a.id] : 1000;
+      var bi = b.id in order ? order[b.id] : 1000;
+      return ai - bi;
+    });
+
+    resetArmed = false;
+    day.reset.textContent = "Put titles back as they were";
+    day.reset.classList.remove("armed");
+    save();
+    renderWeek();
+  });
+
+  day.restore.addEventListener("click", function () {
+    seedTitles().forEach(function (std) {
+      var here = data.titles.some(function (t) { return t.id === std.id; });
+      if (!here) data.titles.push(std);
+    });
+    // put them back in the standard order, custom ones after
+    data.titles.sort(function (a, b) {
+      var ai = a.stock ? parseInt(a.id.slice(1), 10) : 1000;
+      var bi = b.stock ? parseInt(b.id.slice(1), 10) : 1000;
+      return ai - bi;
+    });
+    save();
+    renderWeek();
+  });
+
+  day.btn.addEventListener("click", function () {
+    menuOpen = !menuOpen;
+    renderDay();
+  });
+
+  function addTitle() {
+    var v = day.newTitle.value.trim();
+    if (!v) { day.newTitle.focus(); return; }
+    var dup = data.titles.some(function (t) { return t.name.toLowerCase() === v.toLowerCase(); });
+    if (dup) { day.newTitle.select(); return; }
+
+    var fresh = { id: "c" + uid(), name: v, emoji: "⭐", group: "Other", on: true, stock: false };
+    data.titles.push(fresh);
+    day.newTitle.value = "";
+    save();
+
+    // A new title lands with a placeholder star, so the icon picker opens
+    // straight away for the parent to choose the real one.
+    titleEditing = null;
+    titleArmed = null;
+    picking = fresh.id;
+    renderWeek();
+    pick.wrap.scrollIntoView({ block: "nearest" });
+  }
+
+  day.addTitle.addEventListener("click", addTitle);
+  day.newTitle.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addTitle(); }
+  });
+
+  // A target of nothing makes no sense, so anything below 1 is pulled back up.
+  function saveTarget(commit) {
+    var kid = shownKid();
+    if (!kid) return;
+
+    var n = parseInt(week.rewardTarget.value, 10);
+    if (!(n >= 1)) {
+      if (!commit) return;              // let them finish typing first
+      n = 1;
+    }
+    n = Math.max(1, Math.round(n));
+
+    data.reward[kid.id] = n;
+    save();
+    if (commit) week.rewardTarget.value = n;
+    renderWeek();
+  }
+
+  week.rewardTarget.addEventListener("input", function () { saveTarget(false); });
+  week.rewardTarget.addEventListener("change", function () { saveTarget(true); });
+  week.rewardTarget.addEventListener("blur", function () { saveTarget(true); });
+
+  week.picker.addEventListener("change", function () {
+    if (!week.picker.value) return;
+    shownMonday = fromYmd(week.picker.value);
+    renderWeek();
+  });
+
+  week.current.addEventListener("click", function () {
+    shownMonday = thisMonday;
+    renderWeek();
+  });
+
+  /* ---------- adding ---------- */
+
+  KINDS.forEach(function (kind) {
+    var ui = el[kind];
+
+    function add() {
+      if (editing && editing.kind === kind) return;   // belt and braces
+      var v = ui.input.value.trim();
+      if (!v) { ui.input.focus(); return; }
+      if (taken(kind, v)) {
+        setNote(kind, "There is already a " + wordFor[kind] + " called " + v + ".", true);
+        render();
+        ui.input.focus();
+        return;
+      }
+      data[kind].push({ id: uid(), name: v });
+      ui.input.value = "";
+      arming = null;
+      adding = null;       // closes again until "+" is pressed once more
+      setNote(kind, null);
+      save();
+      render();
+    }
+
+    // The "+" beside the title opens the field; pressing it again closes it.
+    ui.add.addEventListener("click", function () {
+      if (adding === kind) {
+        adding = null;
+      } else {
+        adding = kind;
+        arming = null;
+        clearEdit();
+      }
+      setNote(kind, null);
+      render();
+    });
+
+    ui.ok.addEventListener("click", add);
+    ui.input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); add(); }
+      else if (e.key === "Escape") { e.preventDefault(); adding = null; setNote(kind, null); render(); }
+    });
+    ui.input.addEventListener("input", function () {
+      if (notes[kind]) { setNote(kind, null); render(); ui.input.focus(); }
+    });
+  });
+
+  /* ---------- backup ---------- */
+
+  // The browser keeps its storage separately for every address a page is opened
+  // from, so this is how a jar moves between the file, localhost and a phone.
+  var backupNote = document.getElementById("backupNote");
+
+  function say(text, warn) {
+    backupNote.textContent = text || "";
+    backupNote.className = "bk-note" + (warn ? " warn" : "");
+  }
+
+  document.getElementById("backupBtn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "point-jar-" + ymd(new Date()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    say("Backup saved to your Downloads folder.");
+  });
+
+  document.getElementById("restoreFile").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      var loaded;
+      try { loaded = JSON.parse(reader.result); } catch (err) { loaded = null; }
+
+      if (!loaded || !Array.isArray(loaded.parents) || !Array.isArray(loaded.kids)) {
+        say("That file is not a Point Jar backup.", true);
+        return;
+      }
+
+      data = loaded;
+      if (!data.points) data.points = {};
+      if (!data.marks) data.marks = {};
+      if (!data.more) data.more = {};
+      if (!data.redLine) data.redLine = {};
+      if (!data.strikes) data.strikes = {};
+      if (!data.reward) data.reward = {};
+      if (!Array.isArray(data.titles) || !data.titles.length) data.titles = seedTitles();
+      fixGroups(data.titles);
+      if (!data.startedOn) data.startedOn = ymd(new Date());
+
+      KINDS.forEach(function (kind) { setActive(kind, null); });   // ask again
+      save();
+      render();
+      renderWeek();
+      say("Restored " + data.parents.length + " parents, " + data.kids.length + " kids.");
+    };
+    reader.readAsText(file);
+  });
+
+  // Once installed, the app carries its own copy of these files and opens with
+  // no internet at all. (Ignored when opened straight from a file:// path.)
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function () {});
+    });
+  }
+
+  var weekReady = true;
+  render();
+  renderWeek();
+})();
+</script>
+</body>
+</html>
