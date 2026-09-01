@@ -677,12 +677,13 @@
   /* the one title that wipes a whole day */
   /* its own card, with air around it */
   .redline {
-    display: flex; align-items: center; gap: 14px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 12px 14px;
     margin-bottom: 18px; padding: 16px 18px;
   }
   .redline[hidden] { display: none; }
   .redline .rl-flag { font-size: 26px; line-height: 1; }
-  .rl-words { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  /* the words never squeeze to one-word-per-line: they take a new row instead */
+  .rl-words { flex: 1 1 260px; min-width: 220px; display: flex; flex-direction: column; }
   .rl-words strong { font-family: var(--font-title); font-weight: 600; font-size: 17px; }
   .rl-sub { color: var(--muted); font-size: 12.5px; }
   .rl-btn {
