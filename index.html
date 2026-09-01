@@ -186,10 +186,12 @@
   .swatch.sage { background: linear-gradient(135deg, #a76631 50%, #527f3f 50%); }
   .swatch.blue { background: linear-gradient(135deg, #2f6fd0 50%, #17806b 50%); }
   .swatch.pink { background: linear-gradient(135deg, #c4497f 50%, #5f8a52 50%); }
-  @media (max-width: 520px) {
+  @media (max-width: 700px) {
+    /* the palette swatches and the light/dark button sit above the title */
+    header.top { flex-direction: column; gap: 12px; padding-top: 6px; }
+    header.top .looks { position: static; justify-content: center; }
     .brand .jar { font-size: 30px; }
-    .brand h1 { font-size: 25px; }
-    header.top { padding-top: 40px; }
+    .brand h1 { font-size: 27px; }
   }
 
   .theme-toggle {
@@ -473,13 +475,17 @@
   .day.today .day-name { color: var(--accent); }
   .day.future .track { opacity: .5; }
 
-  @media (max-width: 520px) {
-    .week { padding: 14px 10px 16px; }
-    .days { gap: 4px; }
-    .track { height: 108px; }
+  @media (max-width: 700px) {
+    .week { padding: 16px 12px 18px; }
+    .days { gap: 5px; }
+    .track { height: 112px; padding: 0 3px; gap: 3px; }
     .day-name { font-size: 10.5px; }
     .day-date { font-size: 10px; }
-    .week-head { flex-wrap: wrap; }
+    .val { font-size: 10px; gap: 3px; }
+
+    /* the week header stacks: picker, then the title, then Current week */
+    .week-head { flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .week-when { flex: 1 1 100%; order: -1; }
   }
 
   /* ---------- the selected day ---------- */
@@ -718,12 +724,15 @@
   .day-panel.locked .state.on { opacity: 1; }
   .day-panel.locked .mark { background: var(--panel); }
 
-  @media (max-width: 520px) {
-    .marks { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 8px; }
-    .mark { padding: 11px 7px 9px; }
+  @media (max-width: 700px) {
+    .marks { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+    .mark { padding: 12px 6px 10px; }
     .mark .emo { font-size: 30px; }
-    .mark .label { font-size: 12px; }
-    .state { width: 30px; height: 30px; font-size: 15px; }
+    .mark .label { font-size: 12px; min-height: 2.6em; }
+    .states { gap: 4px; }
+    .state { width: 30px; height: 32px; font-size: 15px; }   /* still thumb-sized */
+    .tally { top: 6px; right: 6px; }
+    .tally span { padding: 1px 6px; font-size: 10.5px; }
   }
 
   /* carrying the jar between addresses and devices */
@@ -739,6 +748,38 @@
   .bk-note.warn { color: var(--danger); }
 
   .foot { color: var(--muted); font-size: 13px; text-align: center; margin-top: 14px; }
+
+  /* ---------- phones ---------- */
+  @media (max-width: 700px) {
+    .wrap { padding: 14px 12px 48px; }
+
+    /* Red Line: title and words on their own line, then strikes and buttons */
+    .redline { flex-wrap: wrap; gap: 10px 12px; padding: 14px; }
+    .rl-flag { font-size: 22px; }
+    .rl-words { flex: 1 1 calc(100% - 36px); }
+    .rl-words strong { font-size: 16px; }
+    .rl-sub { font-size: 12px; }
+    .strikes { margin-left: 0; flex: 0 0 auto; }
+    .strike { width: 38px; height: 38px; }
+    .redline .rl-btn { flex: 1 1 auto; text-align: center; }
+
+    /* day heading, total and the Titles button stop fighting for one line */
+    .day-panel-head { flex-wrap: wrap; }
+    .day-panel-head h3 { flex: 1 1 100%; }
+
+    /* reward line */
+    .rw-head { gap: 8px; }
+    .rw-state { margin-left: 0; flex: 1 1 100%; }
+
+    /* week totals and the week header */
+    .week-totals { gap: 8px; }
+    .wk-picker select { max-width: 150px; }
+
+    /* the icon picker and titles menu */
+    .menu-list { grid-template-columns: 1fr; max-height: 300px; }
+    .menu-row { flex-wrap: wrap; }
+    .picker-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+  }
 </style>
 </head>
 <body>

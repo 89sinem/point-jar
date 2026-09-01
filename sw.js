@@ -1,7 +1,7 @@
 /* Keeps Point Jar working with no internet at all.
    Bump CACHE when the app changes so phones pick the new version up. */
 
-var CACHE = "point-jar-v1";
+var CACHE = "point-jar-v2";
 
 var FILES = [
   "./",
@@ -31,6 +31,29 @@ self.addEventListener("activate", function (e) {
 
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
+
+  // The app itself is fetched fresh whenever there is a connection, so a new
+  // version shows up the first time the icon is opened rather than the second.
+  // With no connection the stored copy is served instead.
+  var isPage = e.request.mode === "navigate" ||
+               (e.request.destination === "document");
+
+  if (isPage) {
+    e.respondWith(
+      fetch(e.request).then(function (res) {
+        var copy = res.clone();
+        caches.open(CACHE).then(function (c) {
+          try { c.put("./index.html", copy); } catch (err) {}
+        });
+        return res;
+      }).catch(function () {
+        return caches.match("./index.html").then(function (hit) {
+          return hit || caches.match("./");
+        });
+      })
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(e.request).then(function (hit) {
