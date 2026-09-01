@@ -575,6 +575,18 @@
   .tally .t-up { background: var(--good); }
   .tally .t-down { background: var(--danger); }
 
+  /* clear this card's points */
+  .wipe {
+    position: absolute; top: 7px; left: 7px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+    border-radius: 999px; padding: 2px 7px; cursor: pointer;
+    font-family: inherit; font-size: 11px; font-weight: 800; line-height: 1.35;
+  }
+  .wipe:hover { border-color: var(--danger); color: var(--danger); }
+  .wipe.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .wipe.undo { color: var(--accent); border-color: var(--accent); }
+  .wipe.undo:hover { background: var(--accent-soft); }
+
   .mark { position: relative; }
 
   h4.section {
@@ -1065,13 +1077,14 @@
           if (!d.redLine || typeof d.redLine !== "object") d.redLine = {};
           if (!d.strikes || typeof d.strikes !== "object") d.strikes = {};
           if (!d.reward || typeof d.reward !== "object") d.reward = {};
+          if (!d.cleared || typeof d.cleared !== "object") d.cleared = {};
           if (!d.startedOn) d.startedOn = ymd(new Date());
           return d;
         }
       }
     } catch (e) {}
     return {
-      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {},
+      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {},
       titles: seedTitles(), startedOn: ymd(new Date())
     };
   }
@@ -2028,6 +2041,8 @@
       li.className = "mark" +
         (m.off ? " off" : m.up && m.down ? " both" : m.up ? " up" : m.down ? " down" : "");
 
+      // Off means the card shows nothing at all: the numbers are kept in the
+      // record and reappear when it is switched back on.
       if (!m.off && (m.up || m.down)) {
         var tally = document.createElement("span");
         tally.className = "tally";
@@ -2063,6 +2078,55 @@
 
       // Nothing recorded shows nothing at all. After a 🙂 the score is green
       // with a plus; after a 🙁 it is red with a minus, resting on a red zero.
+      // Wipe this card back to nothing — both sides at once. Two taps, so a
+      // long-earned +16 cannot vanish by accident, and what was cleared is kept
+      // so it can be brought back.
+      if ((m.up || m.down) && editable()) {
+        var armed = clearArm === t.id;
+        var wipe = document.createElement("button");
+        wipe.type = "button";
+        wipe.className = "wipe" + (armed ? " armed" : "");
+        wipe.textContent = armed ? "clear?" : "↺";
+        wipe.title = armed ? "Tap again to clear this card" : "Clear all points on this card";
+        wipe.setAttribute("aria-label", wipe.title + " — " + t.name);
+        wipe.addEventListener("click", function () {
+          if (armed) {
+            var kid = shownKid();
+            var dm = kid && marksFor(kid.id, selectedKey, false);
+            if (dm) {
+              stash(kid.id, selectedKey, t.id, { up: m.up, down: m.down });
+              delete dm[t.id];
+            }
+            clearArm = null;
+            save();
+          } else {
+            clearArm = t.id;
+          }
+          renderWeek();
+        });
+        li.appendChild(wipe);
+
+      } else if (!m.up && !m.down && editable() && stashed(t.id)) {
+        // Cleared by mistake? The old numbers are still here until something
+        // new is tapped on this card.
+        var old = stashed(t.id);
+        var back = document.createElement("button");
+        back.type = "button";
+        back.className = "wipe undo";
+        back.textContent = "undo +" + old.up + "/-" + old.down;
+        back.title = "Bring back the cleared points";
+        back.addEventListener("click", function () {
+          var kid = shownKid();
+          if (!kid) return;
+          var dm = marksFor(kid.id, selectedKey, true);
+          dm[t.id] = { up: old.up, down: old.down, off: false, by: active.parents.id || null };
+          stash(kid.id, selectedKey, t.id, null);
+          save();
+          renderWeek();
+        });
+        li.appendChild(back);
+      }
+
       var states = document.createElement("div");
       states.className = "states";
       states.appendChild(stateBtn("up", "🙂", 1, m, t, "Give a point"));
@@ -2099,6 +2163,23 @@
   // 🙂 adds a point, 🙁 takes one. Where the section does not allow more points
   // each title stops at a single one, and tapping the state it already has
   // clears it back to nothing.
+  // What a clear took away, held so it can be put back. One per card per day.
+  function stash(kidId, key, titleId, value) {
+    if (!data.cleared[kidId]) data.cleared[kidId] = {};
+    if (!data.cleared[kidId][key]) data.cleared[kidId][key] = {};
+
+    if (value) data.cleared[kidId][key][titleId] = value;
+    else delete data.cleared[kidId][key][titleId];
+  }
+
+  function stashed(titleId) {
+    var kid = shownKid();
+    if (!kid) return null;
+    var day = data.cleared[kid.id] && data.cleared[kid.id][selectedKey];
+    var was = day && day[titleId];
+    return was && (was.up || was.down) ? was : null;
+  }
+
   // Only today can be changed. What a past day holds is a record of that day.
   function editable() { return selectedKey === ymd(new Date()); }
 
@@ -2109,6 +2190,9 @@
     var dayMarks = marksFor(kid.id, selectedKey, true);
     var m = readMark(dayMarks[t.id]);
     var next;
+
+    clearArm = null;                          // drops a pending "clear?"
+    stash(kid.id, selectedKey, t.id, null);   // new points end the undo offer
 
     // 🙂 and 🙁 are always counted apart — one never undoes the other.
     // Plain sections allow one of each; a "more points" section lets a parent
@@ -2146,6 +2230,7 @@
   var titleEditing = null;   // id of the title open for renaming
   var titleArmed = null;     // id of the title whose remove was tapped once
   var picking = null;        // id of the title whose icon is being chosen
+  var clearArm = null;       // card whose "clear all points" was tapped once
 
   var PICKER_EMOJIS = (
     "🛏️ 🧼 👕 🥣 🪥 📺 🌳 🏃 🤫 🧹 🛁 👨‍👩‍👧 🐶 🐱 🧒 👦 👧 🧠 📝 📖 📓 🌙 🏠 🌍 🏫 " +
