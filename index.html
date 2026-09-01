@@ -2081,7 +2081,11 @@
       // Wipe this card back to nothing — both sides at once. Two taps, so a
       // long-earned +16 cannot vanish by accident, and what was cleared is kept
       // so it can be brought back.
-      if ((m.up || m.down) && editable()) {
+      // Only sections set to "More points" can pile numbers up, so only they
+      // need a way to wipe them. A plain card is undone by tapping its own face.
+      var canClear = !!data.more[t.group];
+
+      if (canClear && (m.up || m.down) && editable()) {
         var armed = clearArm === t.id;
         var wipe = document.createElement("button");
         wipe.type = "button";
@@ -2106,7 +2110,7 @@
         });
         li.appendChild(wipe);
 
-      } else if (!m.up && !m.down && editable() && stashed(t.id)) {
+      } else if (canClear && !m.up && !m.down && editable() && stashed(t.id)) {
         // Cleared by mistake? The old numbers are still here until something
         // new is tapped on this card.
         var old = stashed(t.id);
