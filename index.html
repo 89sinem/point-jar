@@ -676,9 +676,8 @@
   :root[data-theme="dark"] .mark.soso { background: #332a17; }
   .tally .t-soso { background: #c9922f; }
   .soso-word {
-    font-size: 11px; font-weight: 800; color: #a6761f;
-    letter-spacing: .03em; text-transform: uppercase;
-    text-align: center; line-height: 1.2; margin: 0 0 6px; max-width: 100%;
+    font-size: 10.5px; font-weight: 800; color: #a6761f;
+    text-align: center; line-height: 1.25; margin: 0 0 6px; max-width: 100%;
   }
   :root[data-theme="dark"] .soso-word { color: #e8c274; }
   .mark.off { background: var(--panel-2); }
@@ -748,15 +747,16 @@
   .day-panel.locked .mark { background: var(--panel); }
 
   @media (max-width: 700px) {
-    .marks { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
-    .mark { padding: 12px 6px 10px; }
-    .mark .emo { font-size: 30px; }
-    .mark .label { font-size: 12px; min-height: 2.6em; }
+    /* two per row, so the card reads exactly like it does on the Mac */
+    .marks { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .mark { padding: 12px 8px 10px; }
+    .mark .emo { font-size: 32px; }
+    .mark .label { font-size: 12.5px; min-height: 2.6em; }
     .states { gap: 4px; }
     .state { width: 30px; height: 32px; font-size: 15px; }   /* still thumb-sized */
     .tally { top: 6px; right: 6px; }
     .tally span { padding: 1px 6px; font-size: 10.5px; }
-    .soso-word { font-size: 10px; margin-bottom: 5px; }
+    .soso-word { font-size: 10px; line-height: 1.25; margin-bottom: 5px; }
     .wipe { font-size: 10px; padding: 2px 6px; top: 6px; left: 6px; }
   }
 
@@ -2168,8 +2168,8 @@
       if (soso) {
         word = document.createElement("span");
         word.className = "soso-word";
-        word.textContent = "So so";                        // short: fits a phone card
-        word.title = "Not good, not bad — the two cancelled out";
+        word.textContent = "So so — not good, not bad";
+        word.title = "The good and the bad cancelled out — counts as nothing";
       }
 
       var states = document.createElement("div");
