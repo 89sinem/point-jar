@@ -378,6 +378,7 @@
   .wt-pill .face { font-size: 15px; }
   .wt-pill.up { background: var(--good); }
   .wt-pill.down { background: var(--danger); }
+  .wt-pill.soso { background: #c9922f; }
   .wt-word { color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 
   /* the weekly goal, counted from the 🙂 side only */
@@ -670,7 +671,16 @@
 
   .mark.up { border-color: var(--good); background: var(--good-soft); }
   .mark.down { border-color: var(--danger); background: var(--danger-soft); }
-  .mark.both { border-color: var(--muted); }
+  /* both faces tapped: the two cancel and the card says so */
+  .mark.soso { border-color: #c9922f; background: #fbf3e2; }
+  :root[data-theme="dark"] .mark.soso { background: #332a17; }
+  .tally .t-soso { background: #c9922f; }
+  .soso-word {
+    font-size: 11px; font-weight: 800; color: #a6761f;
+    letter-spacing: .03em; text-transform: uppercase;
+    text-align: center; line-height: 1.2; margin: 0 0 6px; max-width: 100%;
+  }
+  :root[data-theme="dark"] .soso-word { color: #e8c274; }
   .mark.off { background: var(--panel-2); }
   .mark.off .emo { filter: grayscale(1); opacity: .4; }
   .mark.off .label { opacity: .45; }
@@ -746,6 +756,8 @@
     .state { width: 30px; height: 32px; font-size: 15px; }   /* still thumb-sized */
     .tally { top: 6px; right: 6px; }
     .tally span { padding: 1px 6px; font-size: 10.5px; }
+    .soso-word { font-size: 10px; margin-bottom: 5px; }
+    .wipe { font-size: 10px; padding: 2px 6px; top: 6px; left: 6px; }
   }
 
   /* carrying the jar between addresses and devices */
@@ -1689,6 +1701,9 @@
     week.totals.appendChild(totalPill("up", "🙂", "+" + up));
     week.totals.appendChild(totalPill("down", "🙁", "-" + down));
 
+    var soso = tallies.reduce(function (s, t) { return s + t.soso; }, 0);
+    if (soso) week.totals.appendChild(totalPill("soso", "😐", String(soso)));
+
     renderReward(up, down);
   }
 
@@ -1822,9 +1837,13 @@
     save();
   }
 
+  // A title given both faces is a "so so" day for that title — the good and the
+  // bad cancel, so it counts as nothing on either side.
+  function isSoSo(m) { return !m.off && m.up > 0 && m.up === m.down; }
+
   // A day is two separate totals: points given (🙂) and points taken (🙁).
   function dayTally(date) {
-    var out = { up: 0, down: 0, marked: false, void: false };
+    var out = { up: 0, down: 0, soso: 0, marked: false, void: false };
     var kid = shownKid();
     if (!kid) return out;
 
@@ -1841,11 +1860,12 @@
     Object.keys(day).forEach(function (id) {
       var m = readMark(day[id]);
       if (m.off) return;
+      if (isSoSo(m)) { out.soso += 1; return; }   // cancels out: worth nothing
       out.up += m.up;
       out.down += m.down;
     });
 
-    out.marked = out.up > 0 || out.down > 0;
+    out.marked = out.up > 0 || out.down > 0 || out.soso > 0;
     return out;
   }
 
@@ -1946,9 +1966,10 @@
     day.total.textContent = !kid ? ""
       : sum.void ? "🚩 Red Line — this day is zero"
       : sum.marked
-        ? (sum.up ? "+" + sum.up + " given" : "") +
-          (sum.up && sum.down ? " · " : "") +
-          (sum.down ? "-" + sum.down + " taken" : "")
+        ? [sum.up ? "+" + sum.up + " given" : "",
+           sum.down ? "-" + sum.down + " taken" : "",
+           sum.soso ? "😐 " + sum.soso + " so so" : ""
+          ].filter(Boolean).join(" · ")
         : "";
     day.total.className = "day-total";
 
@@ -2038,12 +2059,24 @@
       var m = readMark(dayMarks[t.id]);
 
       var li = document.createElement("li");
+      var soso = isSoSo(m);
+
       li.className = "mark" +
-        (m.off ? " off" : m.up && m.down ? " both" : m.up ? " up" : m.down ? " down" : "");
+        (m.off ? " off" : soso ? " soso" : m.up ? " up" : m.down ? " down" : "");
 
       // Off means the card shows nothing at all: the numbers are kept in the
       // record and reappear when it is switched back on.
-      if (!m.off && (m.up || m.down)) {
+      if (soso) {
+        var mid = document.createElement("span");
+        mid.className = "tally";
+        var ms = document.createElement("span");
+        ms.className = "t-soso";
+        ms.textContent = "😐 0";
+        ms.title = "Good and bad cancelled out — counts as nothing";
+        mid.appendChild(ms);
+        li.appendChild(mid);
+
+      } else if (!m.off && (m.up || m.down)) {
         var tally = document.createElement("span");
         tally.className = "tally";
         if (m.up) {
@@ -2131,6 +2164,14 @@
         li.appendChild(back);
       }
 
+      var word = null;
+      if (soso) {
+        word = document.createElement("span");
+        word.className = "soso-word";
+        word.textContent = "So so";                        // short: fits a phone card
+        word.title = "Not good, not bad — the two cancelled out";
+      }
+
       var states = document.createElement("div");
       states.className = "states";
       states.appendChild(stateBtn("up", "🙂", 1, m, t, "Give a point"));
@@ -2139,7 +2180,11 @@
         m.off ? (m.up || m.down ? "Switch back on and bring the points back" : "Switch back on")
               : "Does not apply today"));
 
-      li.appendChild(emo); li.appendChild(label); li.appendChild(states);
+      // emoji, name, then the "so so" line if there is one, then the faces
+      li.appendChild(emo);
+      li.appendChild(label);
+      if (word) li.appendChild(word);
+      li.appendChild(states);
       return li;
   }
 
