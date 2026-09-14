@@ -362,6 +362,8 @@
     padding: 7px 9px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
     max-width: 190px;
   }
+  .wk-empty { display: inline-block; max-width: 150px; font-size: 13px; color: var(--muted); }
+  .wk-empty[hidden] { display: none; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   /* the week's running totals, under the days */
@@ -370,18 +372,43 @@
     gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
   }
   .week-totals:empty { display: none; }
-  .wt-pill {
-    display: inline-flex; align-items: center; gap: 7px;
-    border-radius: 999px; padding: 7px 14px;
-    font-size: 14px; font-weight: 800; color: #fff;
-  }
-  .wt-pill .face { font-size: 15px; }
-  .wt-pill.up { background: var(--good); }
-  .wt-pill.down { background: var(--danger); }
-  .wt-pill.soso { background: #c9922f; }
-  .wt-word { color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 
-  /* the weekly goal, counted from the 🙂 side only */
+  /* under the reward bar: what the week added and what it took away, kept apart */
+  :root { --extra: #3d6fa8; }
+  :root[data-theme="dark"] { --extra: #86a9d8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --extra: #86a9d8; } }
+  .rw-pm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .pm {
+    border-radius: 10px; padding: 8px 12px 10px;
+    display: grid; grid-template-columns: 1fr auto; column-gap: 16px; align-items: start;
+  }
+  .pm.plus { background: var(--good-soft); }
+  .pm.minus { background: var(--danger-soft); }
+  .pm-words { min-width: 0; }
+  .pm-t { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); line-height: 1.2; }
+  .pm-sub { margin-top: 3px; font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.4; }
+  .pm-num { align-self: center; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .pm.plus .pm-num { color: var(--good); }
+  .pm.minus .pm-num { color: var(--danger); }
+  .pm-bar { display: flex; gap: 2px; height: 5px; margin: 6px 0 2px; border-radius: 999px; overflow: hidden; background: rgba(0,0,0,.07); }
+  .pm-bar i { display: block; height: 100%; }
+  .pm-bar i { flex: 0 0 auto; }
+  .pm-bar i:last-child { border-radius: 0 999px 999px 0; }
+  .pm-hit { position: relative; padding: 4px 0; margin: 2px 0 -2px; cursor: default; }
+  .pm-hit .pm-bar { margin: 0; }
+  .pm-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+  .pm-key span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .pm-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  .pm-tip {
+    position: absolute; top: calc(100% + 2px); transform: translateX(-50%); z-index: 5;
+    white-space: nowrap; pointer-events: none;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 6px;
+    padding: 3px 8px; font-size: 13px; font-weight: 600; line-height: 1.2;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  }
+  .pm-tip[hidden] { display: none; }
+
+  /* the weekly goal: 🙂 − 🙁 − one 🙁 per five 😐 */
   .reward { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
   .reward[hidden] { display: none; }
   .rw-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
@@ -398,7 +425,9 @@
   .rw-target input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .rw-target input:hover { border-color: var(--accent); }
   .rw-target input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .rw-state { margin-left: auto; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  /* the ⓘ sits alone on the left; the title, target and score line up on the right */
+  .rw-head .rw-info-btn { order: -1; margin-right: auto; }
+  .rw-state { margin-left: 4px; font-size: 15px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
   .rw-state.done { color: var(--good); }
 
   /* a plain left-to-right run from nothing to the target, with the gift at the
@@ -407,29 +436,88 @@
     position: relative; height: 16px; border-radius: 999px;
     background: var(--panel-2); border: 1px solid var(--line);
   }
+  /* each quarter of the way is a shade darker green; the stripes stay pinned to
+     the full track, so a quarter passed always shows its own colour */
   .rw-fill {
-    height: 100%; width: 0; border-radius: 999px; background: var(--good);
+    height: 100%; width: 0; border-radius: 999px;
+    background: linear-gradient(90deg, #a9c796 0 25%, #7fa865 25% 50%, #5d8a47 50% 75%, #3f6b30 75% 100%);
+    background-repeat: no-repeat;
     transition: width .25s ease;
   }
   .rw-goal {
-    position: absolute; left: 100%; top: 50%; margin-left: -8px; transform: translateY(-50%);
-    font-size: 15px; line-height: 1; filter: grayscale(1); opacity: .5;
+    position: absolute; left: 100%; top: 50%; margin-left: -13px; transform: translateY(-50%);
+    font-size: 24px; line-height: 1; filter: grayscale(1); opacity: .5;
     transition: filter .2s ease, opacity .2s ease, transform .2s ease;
   }
+  /* quarter marks along the bar, so progress reads as steps */
+  .rw-tick {
+    position: absolute; top: 2px; bottom: 2px; width: 2px; margin-left: -1px;
+    background: var(--muted); opacity: .35; border-radius: 1px; pointer-events: none;
+  }
+  .rw-tick.hit { background: var(--panel); opacity: .9; }
+  .rw-marks { position: relative; height: 16px; margin-top: 4px; }
+  .rw-marks span {
+    position: absolute; transform: translateX(-50%);
+    font-size: 11px; font-weight: 600; color: var(--muted); opacity: .6;
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .rw-marks span.hit { color: #3f6b30; opacity: 1; font-weight: 700; }
+  :root[data-theme="dark"] .rw-marks span.hit { color: #a9c796; }
   .rw-goal.lit { filter: none; opacity: 1; transform: translateY(-50%) scale(1.25); }
 
-  /* the taken side, drawn the same way right below so the two lengths compare */
-  .rw-track.down { margin-top: 4px; }
-  .rw-fill.down { background: var(--danger); }
+  /* the ⓘ next to Reward opens a short explanation right under the bar */
+  .rw-info-btn {
+    width: 22px; height: 22px; padding: 0; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+    font-size: 13px; line-height: 1; font-family: inherit; cursor: pointer;
+  }
+  .rw-info-btn:hover, .rw-info-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  .rw-info-btn { position: relative; }
+  /* a small label that appears straight away on hover or keyboard focus */
+  .rw-info-btn::after {
+    content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px);
+    transform: translate(-50%, 4px); white-space: nowrap; pointer-events: none;
+    background: var(--panel); color: var(--muted); border-radius: 6px; padding: 2px 6px;
+    font-size: 13px; font-weight: 600; line-height: 1.2; z-index: 5;
+    opacity: 0; transition: opacity .12s ease, transform .12s ease;
+  }
+  .rw-info-btn:hover::after, .rw-info-btn:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+  /* the button is at the left edge, so its label opens to the right instead of centred */
+  .rw-head .rw-info-btn::after { left: 0; transform: translate(0, 4px); }
+  .rw-head .rw-info-btn:hover::after, .rw-head .rw-info-btn:focus-visible::after { transform: translate(0, 0); }
+  @media (hover: none) { .rw-info-btn::after { display: none; } }
+  .rw-info {
+    margin-top: 14px; padding: 14px 16px; border-radius: 12px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    font-size: 13px; line-height: 1.5; color: var(--text);
+  }
+  .rw-info[hidden] { display: none; }
+  .rw-info strong { display: block; margin-bottom: 6px; font-size: 13.5px; font-weight: 700; }
+  .rw-info ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .rw-info li { display: grid; grid-template-columns: 22px 1fr; align-items: start; }
+  .rw-info b { font-weight: 700; }
 
-  .rw-row { display: flex; align-items: center; gap: 6px; margin: 4px 0 8px; font-size: 12px; font-weight: 800; }
-  .rw-face { font-size: 13px; }
-  .rw-num.up { color: var(--good); }
-  .rw-num.down { color: var(--danger); }
 
-
-  .chart { position: relative; }
+  /* a plot: number scale on the left, faint gridlines, slim paired bars */
+  .chart {
+    --plot-h: 170px; --plot-pad: 22px;
+    position: relative; display: grid; grid-template-columns: auto 1fr; column-gap: 10px;
+    margin-top: 6px;
+  }
   .chart.blank .days { opacity: .55; }
+  .plot { position: relative; min-width: 0; }
+  .axis { position: relative; height: var(--plot-h); min-width: 18px; }
+  .axis span {
+    position: absolute; right: 0; transform: translateY(50%);
+    font-size: 10.5px; font-weight: 600; color: var(--muted);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .grid { position: absolute; left: 0; right: 0; top: 0; height: var(--plot-h); pointer-events: none; }
+  .grid i {
+    position: absolute; left: 0; right: 0; height: 0;
+    border-top: 1px dashed var(--line);
+  }
+  .grid i.base { border-top: 1px solid var(--muted); opacity: .45; }
   .no-data {
     position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
     margin: 0; padding: 7px 14px; border-radius: 999px;
@@ -439,50 +527,70 @@
   .no-data[hidden] { display: none; }
 
   /* one column per day, bars growing from a shared baseline */
-  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-  .day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .days { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-bottom: 6px; border-radius: 10px; }
 
   .track {
-    position: relative; width: 100%; height: 132px;
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-    display: flex; align-items: flex-end; gap: 4px; padding: 0 6px; overflow: hidden;
+    position: relative; width: 100%; height: var(--plot-h); padding-top: var(--plot-pad);
+    display: flex; align-items: flex-end; justify-content: center; gap: 0;
+    border-radius: 8px 8px 0 0; transition: background .15s ease;
   }
   .bar {
-    flex: 1 1 0; min-width: 0; border-radius: 6px 6px 0 0;
-    min-height: 3px; transition: height .18s ease;
+    position: relative; flex: 0 0 auto; width: 16px;
+    border-radius: 2px 2px 0 0; transition: height .25s ease;
   }
   .bar.up { background: var(--good); }
   .bar.down { background: var(--danger); }
-  .bar.zero { background: var(--line); }
+  .bar.soso { background: #c9922f; }
+  .bar.zero { display: none; }   /* no empty slot: the bars that have a value sit together */
+  /* the figure sits just above its own bar */
+  .bar::after {
+    content: attr(data-v); position: absolute; bottom: 100%; left: 50%;
+    transform: translate(-50%, -4px); white-space: nowrap;
+    font-size: 9.5px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.02em;
+  }
+  .bar.up::after { color: var(--good); }
+  .bar.down::after { color: var(--danger); }
+  .bar.soso::after { color: #b07d22; }
+  :root[data-theme="dark"] .bar.soso::after { color: #e8c274; }
+  .bar.zero::after { content: none; }
 
+  /* the column behind a day lights up softly on hover and when chosen */
   .day:not(.future) { cursor: pointer; }
-  .day.picked .track { border-color: var(--text); box-shadow: 0 0 0 2px var(--line); }
-  .day.today.picked .track { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .day:not(.future):hover { background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+  .day.picked { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); }
   .day:focus { outline: none; }
-  .day:focus-visible .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .val {
-    position: absolute; top: 5px; left: 0; right: 0;
-    display: flex; justify-content: center; gap: 6px;
+    position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%);
+    display: flex; justify-content: center;
     font-size: 11.5px; font-weight: 800;
   }
-  .val .v-up { color: var(--good); }
-  .val .v-down { color: var(--danger); }
 
-  .day-name { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-  .day-date { font-size: 11.5px; color: var(--muted); margin-top: -4px; }
+  .day-name { margin-top: 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .day-date { font-size: 12px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 
-  .day.today .track { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .day.picked .day-name { color: var(--text); }
   .day.today .day-name { color: var(--accent); }
-  .day.future .track { opacity: .5; }
+  .day.today .day-date {
+    color: var(--accent); background: var(--accent-soft);
+    border-radius: 999px; padding: 1px 7px;
+  }
+  .day.future { opacity: .45; }
 
   @media (max-width: 700px) {
     .week { padding: 16px 12px 18px; }
-    .days { gap: 5px; }
-    .track { height: 112px; padding: 0 3px; gap: 3px; }
-    .day-name { font-size: 10.5px; }
-    .day-date { font-size: 10px; }
-    .val { font-size: 10px; gap: 3px; }
+    .chart { --plot-h: 140px; --plot-pad: 18px; column-gap: 6px; }
+    .days { gap: 2px; }
+    .track { gap: 0; }
+    .bar { width: 8px; }
+    /* three figures do not fit side by side on a phone; tap a day for them */
+    .bar::after { content: none; }
+    .axis span { font-size: 9.5px; }
+    .day-name { font-size: 9.5px; letter-spacing: .03em; }
+    .day-date { font-size: 10.5px; }
+    .day.today .day-date { padding: 1px 5px; }
 
     /* the week header stacks: picker, then the title, then Current week */
     .week-head { flex-wrap: wrap; justify-content: center; gap: 8px; }
@@ -585,12 +693,14 @@
   }
   .wipe:hover { border-color: var(--danger); color: var(--danger); }
   .wipe.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
-  .wipe.undo { color: var(--accent); border-color: var(--accent); }
+  /* after a clear the way back sits on the right, where the score was */
+  .wipe.undo { left: auto; right: 7px; color: var(--accent); border-color: var(--accent); }
   .wipe.undo:hover { background: var(--accent-soft); }
 
   .mark { position: relative; }
 
   h4.section {
+    display: flex; align-items: center; gap: 10px;
     margin: 26px 0 10px; font-size: 11.5px; font-weight: 800;
     letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
   }
@@ -649,6 +759,9 @@
     width: 1em; height: 1em; object-fit: cover; border-radius: 6px; vertical-align: -0.12em;
   }
   .mark .emo { cursor: pointer; }
+  .mark .emo.fixed { cursor: default; }
+  .rw-target input:disabled { cursor: default; opacity: .75; }
+  .rw-target input:disabled:hover { border-color: var(--line); }
 
 
   /* one card per title: big emoji, name under it, the three states at the foot */
@@ -662,7 +775,7 @@
     background: var(--panel-2); padding: 14px 10px 10px;
     transition: border-color .15s ease, background .15s ease;
   }
-  .mark .emo { font-size: 38px; line-height: 1.1; }
+  .mark .emo { font-size: 38px; line-height: 1.1; margin-top: 14px; }   /* clear of the corner chips */
   .mark .label {
     font-size: 13.5px; font-weight: 600; text-align: center; line-height: 1.3;
     letter-spacing: -0.01em;
@@ -702,41 +815,118 @@
     margin-bottom: 18px; padding: 16px 18px;
   }
   .redline[hidden] { display: none; }
+  .day-panel[hidden] { display: none; }
+  /* ---------- extra points: school test results ---------- */
+  .extra { margin: 0 0 18px; padding: 18px 18px 20px; }
+  .extra[hidden] { display: none; }
+  .ex-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .ex-head h2 { margin: 0; font-family: var(--font-title); font-weight: 600; font-size: 20px; }
+  .ex-week { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .ex-week b { color: var(--extra); font-size: 16px; margin-left: 2px; }
+  .ex-title { margin: 14px 0 10px; font-size: 11.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+
+  .ex-ask { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px; }
+  .ex-ask label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+  .ex-ask select {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 9px;
+    padding: 7px 9px; font-size: 13.5px; font-weight: 600; font-family: inherit; min-width: 150px;
+  }
+  .ex-ask select:disabled { opacity: .6; }
+  .ex-note { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+  .ex-note[hidden] { display: none; }
+
+  .ex-table { overflow-x: auto; }
+  .ex-grid { display: grid; gap: 10px; min-width: 560px; }
+  .ex-row { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 10px; }
+  .ex-colhead { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 2px 6px; border-bottom: 1px solid var(--line); }
+  .ex-colhead small { display: block; margin-top: 3px; font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12px; }
+
+  .ex-cell { border-left: 3px solid var(--sub); background: var(--sub-soft); border-radius: 4px 10px 10px 4px; padding: 9px 11px 10px; min-width: 0; }
+  .ex-cell.none { border-left-color: var(--line); background: transparent; border: 1px dashed var(--line); border-radius: 10px;
+    display: grid; place-items: center; color: var(--muted); font-size: 12px; opacity: .7; }
+  .ex-name { font-size: 14px; font-weight: 600; color: var(--text); display: flex; justify-content: space-between; gap: 6px; }
+  .ex-name button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 0 2px; }
+  .ex-name button:hover { color: var(--danger); }
+  .ex-sub { margin-top: 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--sub); }
+  .ex-in { display: flex; gap: 8px; margin-top: 8px; }
+  .ex-in label { flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; font-size: 10.5px; font-weight: 700; color: var(--muted); min-width: 0; }
+  .ex-in input {
+    width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 7px; padding: 5px 7px; font-size: 14px; font-weight: 700; font-family: inherit; font-variant-numeric: tabular-nums;
+  }
+  .ex-in input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .ex-in input:focus::placeholder { color: transparent; }   /* the dash goes away while typing */
+  .ex-in input:disabled { opacity: .7; }
+  .ex-in input::-webkit-outer-spin-button, .ex-in input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .ex-in input[type=number] { -moz-appearance: textfield; }
+  .ex-add { display: flex; gap: 8px; margin-top: 12px; max-width: 460px; }
+  .ex-add[hidden] { display: none; }
+  .ex-add input {
+    flex: 1 1 auto; min-width: 0; background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 13.5px; font-family: inherit;
+  }
+  .ex-add input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  /* one colour per kind of test, like a school report */
+  .s-literacy { --sub: #2f6f5e; --sub-soft: color-mix(in srgb, #2f6f5e 13%, var(--panel)); }
+  .s-reading  { --sub: #3d5f8f; --sub-soft: color-mix(in srgb, #3d5f8f 12%, var(--panel)); }
+  .s-math     { --sub: #9a4f2a; --sub-soft: color-mix(in srgb, #9a4f2a 12%, var(--panel)); }
+  .s-writing  { --sub: #6b4f8f; --sub-soft: color-mix(in srgb, #6b4f8f 12%, var(--panel)); }
+  .s-science  { --sub: #2f7f7a; --sub-soft: color-mix(in srgb, #2f7f7a 12%, var(--panel)); }
+  .s-social   { --sub: #7a6a3a; --sub-soft: color-mix(in srgb, #7a6a3a 13%, var(--panel)); }
+  .s-other    { --sub: #767a6b; --sub-soft: color-mix(in srgb, #767a6b 12%, var(--panel)); }
+  :root[data-theme="dark"] .s-literacy { --sub: #7fc3ae; }
+  :root[data-theme="dark"] .s-reading  { --sub: #93b2e0; }
+  :root[data-theme="dark"] .s-math     { --sub: #e3a27f; }
+  :root[data-theme="dark"] .s-writing  { --sub: #bba1dd; }
+  :root[data-theme="dark"] .s-science  { --sub: #7fcfc9; }
+  :root[data-theme="dark"] .s-social   { --sub: #d2c08a; }
+  :root[data-theme="dark"] .s-other    { --sub: #b5b8aa; }
+
+  @media (max-width: 700px) {
+    .extra { padding: 14px 12px 16px; }
+    .ex-ask select { min-width: 0; width: 100%; }
+    .ex-ask label { flex: 1 1 30%; }
+  }
+
+  .pick-hint { margin: 0; padding: 18px; text-align: center; color: var(--muted); font-size: 14px; font-weight: 600; }
+  .pick-hint[hidden] { display: none; }
   .redline .rl-flag { font-size: 26px; line-height: 1; }
   /* the words never squeeze to one-word-per-line: they take a new row instead */
   .rl-words { flex: 1 1 260px; min-width: 220px; display: flex; flex-direction: column; }
   .rl-words strong { font-family: var(--font-title); font-weight: 600; font-size: 17px; }
   .rl-sub { color: var(--muted); font-size: 12.5px; }
-  .rl-btn {
-    flex: 0 0 auto; border: 1px solid var(--danger); background: var(--panel);
-    color: var(--danger); border-radius: 10px; padding: 8px 14px;
-    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
-  }
-  .rl-btn:hover:not(:disabled) { background: var(--danger-soft); }
-  .rl-btn:disabled { opacity: .45; cursor: not-allowed; }
-
   .redline.on { border-color: var(--danger); background: var(--danger-soft); }
-  .rl-btn.reverse { border-color: var(--line); color: var(--text); }
-  .rl-btn.reverse:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-  .rl-btn[hidden] { display: none; }
-  .redline .rl-btn { margin-left: 0; }
 
-  /* three warnings; the third pulls the line by itself */
-  .strikes { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  /* three flags; the third one turns the day to zero by itself */
+  .strikes { display: flex; align-items: center; gap: 8px; margin-left: auto; }
   .strike {
-    width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
-    border: 2px solid var(--line); background: var(--panel); color: var(--muted);
-    font-family: inherit; font-size: 13px; font-weight: 800; line-height: 1;
+    width: 40px; height: 40px; border-radius: 12px; padding: 0; cursor: pointer;
+    border: 1.5px dashed var(--line); background: var(--panel);
+    font-family: inherit; font-size: 20px; line-height: 1;
     display: grid; place-items: center;
     transition: transform .12s ease, background .12s ease, border-color .12s ease;
   }
-  .strike:hover:not(:disabled) { transform: scale(1.08); border-color: var(--danger); color: var(--danger); }
-  .strike.hit { background: var(--danger); border-color: var(--danger); color: #fff; }
-  .strike:disabled { opacity: .45; cursor: not-allowed; }
-  .strike-label { color: var(--muted); font-size: 12px; font-weight: 700; margin-right: 2px; }
-  .redline.on .rl-btn { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .strike .fl { filter: grayscale(1); opacity: .35; transition: filter .12s ease, opacity .12s ease; }
+  .strike:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--danger); }
+  .strike:hover:not(:disabled) .fl { opacity: .7; }
+  .strike.hit { border-style: solid; border-color: var(--danger); background: var(--danger-soft); }
+  .strike.hit .fl { filter: none; opacity: 1; }
+  .strike:disabled { cursor: default; }
+  .strike:disabled:not(.hit) { opacity: .6; }
 
-  .day.voided .track { border-color: var(--danger); }
+  /* clears every flag on the day: an icon only */
+  .rl-reverse {
+    width: 40px; height: 40px; border-radius: 12px; padding: 0; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    font-family: inherit; font-size: 18px; font-weight: 700; line-height: 1;
+    display: grid; place-items: center;
+  }
+  .rl-reverse:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .rl-reverse[hidden] { display: none; }
+  .rl-reverse.off { visibility: hidden; }
+
+  .day.voided .track { background: color-mix(in srgb, var(--danger) 10%, transparent); }
   .val .v-void { color: var(--danger); }
 
   .day-note { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
@@ -750,7 +940,7 @@
     /* two per row, so the card reads exactly like it does on the Mac */
     .marks { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
     .mark { padding: 12px 8px 10px; }
-    .mark .emo { font-size: 32px; }
+    .mark .emo { font-size: 32px; margin-top: 12px; }
     .mark .label { font-size: 12.5px; min-height: 2.6em; }
     .states { gap: 4px; }
     .state { width: 30px; height: 32px; font-size: 15px; }   /* still thumb-sized */
@@ -758,6 +948,7 @@
     .tally span { padding: 1px 6px; font-size: 10.5px; }
     .soso-word { font-size: 10px; line-height: 1.25; margin-bottom: 5px; }
     .wipe { font-size: 10px; padding: 2px 6px; top: 6px; left: 6px; }
+    .wipe.undo { left: auto; right: 6px; }
   }
 
   /* carrying the jar between addresses and devices */
@@ -785,8 +976,7 @@
     .rl-words strong { font-size: 16px; }
     .rl-sub { font-size: 12px; }
     .strikes { margin-left: 0; flex: 0 0 auto; }
-    .strike { width: 38px; height: 38px; }
-    .redline .rl-btn { flex: 1 1 auto; text-align: center; }
+    .strike, .rl-reverse { width: 38px; height: 38px; }
 
     /* day heading, total and the Titles button stop fighting for one line */
     .day-panel-head { flex-wrap: wrap; }
@@ -794,10 +984,10 @@
 
     /* reward line */
     .rw-head { gap: 8px; }
-    .rw-state { margin-left: 0; flex: 1 1 100%; }
+
 
     /* week totals and the week header */
-    .week-totals { gap: 8px; }
+    .rw-pm { grid-template-columns: 1fr; gap: 8px; }
     .wk-picker select { max-width: 150px; }
 
     /* the icon picker and titles menu */
@@ -865,6 +1055,7 @@
       <label class="wk-picker" id="weekPickerWrap" hidden>
         <span class="sr">Go to an earlier week</span>
         <select id="weekPicker"></select>
+        <span class="wk-empty" id="weekPickerEmpty" hidden>No earlier weeks yet</span>
       </label>
       <div class="week-when">
         <h2 id="weekTitle"></h2>
@@ -874,7 +1065,11 @@
     </div>
 
     <div class="chart">
-      <div class="days" id="days"></div>
+      <div class="axis" id="chartAxis" aria-hidden="true"></div>
+      <div class="plot">
+        <div class="grid" id="chartGrid" aria-hidden="true"></div>
+        <div class="days" id="days"></div>
+      </div>
       <p class="no-data" id="noData" hidden>No points recorded this week</p>
     </div>
 
@@ -884,25 +1079,51 @@
       <div class="rw-head">
         <span class="rw-gift">🎁</span>
         <strong>Reward</strong>
-        <label class="rw-target">
-          <span>at</span>
-          <input type="number" id="rewardTarget" min="1" step="1" inputmode="numeric">
-          <span>🙂 points</span>
-        </label>
+        <button class="rw-info-btn" id="rewardInfoBtn" type="button" aria-expanded="false" aria-controls="rewardInfo" data-tip="Reward calculation details" aria-label="Reward calculation details">ⓘ</button>
         <span class="rw-state" id="rewardState"></span>
+        <label class="rw-target">
+          <span>of</span>
+          <input type="number" id="rewardTarget" min="1" step="1" inputmode="numeric" aria-label="Reward target in points">
+        </label>
       </div>
       <div class="rw-track">
         <div class="rw-fill" id="rewardFill"></div>
+        <i class="rw-tick" style="left:25%"></i><i class="rw-tick" style="left:50%"></i><i class="rw-tick" style="left:75%"></i>
         <span class="rw-goal" id="rewardGoal">🎁</span>
       </div>
-      <div class="rw-row"><span class="rw-face">🙂</span><span class="rw-num up" id="rewardNow"></span></div>
-
-      <div class="rw-track down">
-        <div class="rw-fill down" id="rewardDownFill"></div>
+      <div class="rw-marks" id="rewardMarks">
+        <span style="left:25%">25%</span><span style="left:50%">50%</span><span style="left:75%">75%</span>
       </div>
-      <div class="rw-row"><span class="rw-face">🙁</span><span class="rw-num down" id="rewardDown"></span></div>
+      <div class="rw-pm" id="rewardPm"></div>
+      <div class="rw-info" id="rewardInfo" hidden>
+        <strong>How reward points work</strong>
+        <ul>
+          <li><span>🙂</span><span>Each <b>Nailed it</b> adds 1 point.</span></li>
+          <li><span>🙁</span><span>Each <b>Missed it</b> takes away 1 point.</span></li>
+          <li><span>😐</span><span>Behaviour can change during the day, so you can give a title both 🙂 and 🙁 on the same day. When that happens, the title is marked <b>Working on it</b> — a topic that needs more focus. Every 5 Working on it marks in a week take away 1 point.</span></li>
+          <li><span>🚩</span><span>A day with the Red Line pulled counts as zero.</span></li>
+          <li><span>⭐</span><span><b>Extra points</b> from school test results are added to the week they are entered.</span></li>
+        </ul>
+      </div>
     </div>
   </section>
+
+  <section class="extra card" id="extraCard" hidden>
+    <div class="ex-head">
+      <h2>Extra points</h2>
+      <span class="ex-week" id="extraWeek"></span>
+    </div>
+    <h3 class="ex-title">School test results</h3>
+    <div class="ex-ask" id="extraAsk"></div>
+    <p class="ex-note" id="extraNote" hidden></p>
+    <div class="ex-table" id="extraTable"></div>
+    <div class="ex-add" id="extraAdd" hidden>
+      <input type="text" id="extraAddName" placeholder="Add a test your school gives" autocomplete="off" maxlength="50">
+      <button class="add-title" id="extraAddBtn" type="button">Add test</button>
+    </div>
+  </section>
+
+  <p class="pick-hint card" id="pickHint" hidden>👆 Choose a day to review</p>
 
   <section class="redline card" id="redline" hidden>
     <span class="rl-flag">🚩</span>
@@ -911,8 +1132,7 @@
       <span class="rl-sub" id="redlineSub"></span>
     </div>
     <div class="strikes" id="strikes" role="group" aria-label="Strikes"></div>
-    <button class="rl-btn" id="redlineBtn" type="button"></button>
-    <button class="rl-btn reverse" id="redlineReverse" type="button" hidden>↩ Reverse</button>
+    <button class="rl-reverse" id="redlineReverse" type="button" hidden aria-label="Reverse" title="Clear the flags">↩</button>
   </section>
 
   <section class="day-panel card" id="dayPanel">
@@ -1090,13 +1310,14 @@
           if (!d.strikes || typeof d.strikes !== "object") d.strikes = {};
           if (!d.reward || typeof d.reward !== "object") d.reward = {};
           if (!d.cleared || typeof d.cleared !== "object") d.cleared = {};
+          if (!d.tests || typeof d.tests !== "object") d.tests = {};
           if (!d.startedOn) d.startedOn = ymd(new Date());
           return d;
         }
       }
     } catch (e) {}
     return {
-      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {},
+      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {}, tests: {},
       titles: seedTitles(), startedOn: ymd(new Date())
     };
   }
@@ -1527,37 +1748,47 @@
     title: document.getElementById("weekTitle"),
     range: document.getElementById("weekRange"),
     days: document.getElementById("days"),
+    axis: document.getElementById("chartAxis"),
+    grid: document.getElementById("chartGrid"),
     chart: document.querySelector(".chart"),
     totals: document.getElementById("weekTotals"),
     reward: document.getElementById("reward"),
     rewardTarget: document.getElementById("rewardTarget"),
     rewardState: document.getElementById("rewardState"),
     rewardFill: document.getElementById("rewardFill"),
-    rewardDownFill: document.getElementById("rewardDownFill"),
     rewardGoal: document.getElementById("rewardGoal"),
-    rewardNow: document.getElementById("rewardNow"),
-    rewardDown: document.getElementById("rewardDown"),
+    rewardInfo: document.getElementById("rewardInfo"),
+    rewardMarks: document.getElementById("rewardMarks"),
+    rewardPm: document.getElementById("rewardPm"),
+    rewardInfoBtn: document.getElementById("rewardInfoBtn"),
     noData: document.getElementById("noData"),
     picker: document.getElementById("weekPicker"),
     pickerWrap: document.getElementById("weekPickerWrap"),
+    pickerEmpty: document.getElementById("weekPickerEmpty"),
     current: document.getElementById("currentWeekBtn")
   };
-
-  // Always offer at least this many weeks back, even before the jar has that
-  // much history, so the picker is there from day one.
-  var MIN_WEEKS_BACK = 2;
 
   var thisMonday = weekStart(new Date());
   var shownMonday = thisMonday;             // Monday of the week on screen
 
-  // Earlier weeks only exist back to the day the jar was first opened; there is
-  // never anything to show ahead of this week.
+  // Every earlier week in which the kid on screen has something recorded,
+  // newest first. Weeks with nothing in them are left out.
   function earlierMondays() {
-    var first = weekStart(fromYmd(data.startedOn));
-    var floor = addDays(thisMonday, -7 * MIN_WEEKS_BACK);
-    if (first > floor) first = floor;
+    var kid = shownKid();
+    if (!kid) return [];
+    var keys = [];
+    [data.marks, data.redLine, data.strikes].forEach(function (store) {
+      if (store && store[kid.id]) keys = keys.concat(Object.keys(store[kid.id]));
+    });
+    if (!keys.length) return [];
+    keys.sort();
+    var first = weekStart(fromYmd(keys[0]));
     var out = [];
-    for (var m = addDays(thisMonday, -7); m >= first; m = addDays(m, -7)) out.push(m);
+    for (var m = addDays(thisMonday, -7); m >= first; m = addDays(m, -7)) {
+      for (var i = 0; i < 7; i++) {
+        if (dayTally(addDays(m, i)).marked) { out.push(m); break; }
+      }
+    }
     return out;
   }
 
@@ -1566,14 +1797,40 @@
   function oneBar(kind, value, top, label) {
     var b = document.createElement("div");
     b.className = "bar " + kind + (value ? "" : " zero");
-    // stops short of the top so the figures above stay readable
-    b.style.height = value ? Math.round((value / top) * 78) + "%" : "3px";
+    b.style.height = value ? (value / top) * 100 + "%" : "0";
+    b.setAttribute("data-v", (kind === "up" ? "+" : "-") + value);
     b.title = label;
     return b;
   }
 
+  // A round top for the scale (5, 10, 20, 25, 50…) split into even steps.
+  function niceScale(max) {
+    var raw = Math.max(max, 4) / 4;
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var step = [1, 2, 2.5, 5, 10].map(function (f) { return f * mag; })
+      .filter(function (s) { return s >= raw && (s % 1 === 0); })[0] || 10 * mag;
+    return { step: step, top: Math.ceil(max / step) * step || step * 4 };
+  }
+
+  // Gridlines and scale labels, both placed inside the bars' drawing height.
+  function renderScale(scale) {
+    week.axis.textContent = "";
+    week.grid.textContent = "";
+    for (var v = 0; v <= scale.top; v += scale.step) {
+      var pos = "calc((var(--plot-h) - var(--plot-pad)) * " + (v / scale.top) + ")";
+      var line = document.createElement("i");
+      if (v === 0) line.className = "base";
+      line.style.bottom = pos;
+      week.grid.appendChild(line);
+      var lab = document.createElement("span");
+      lab.textContent = v;
+      lab.style.bottom = pos;
+      week.axis.appendChild(lab);
+    }
+  }
+
   function pickDay(key) {
-    return function () { selectedKey = key; renderWeek(); };
+    return function () { selectedKey = key; dayChosen = true; renderWeek(); };
   }
 
   function renderWeek() {
@@ -1582,13 +1839,15 @@
 
     var kid = shownKid();
     var when = isCurrentWeek() ? "This week" : "Week of " + shortDate(shownMonday);
-    week.title.textContent = kid ? kid.name + " — " + when.toLowerCase() : when;
+    week.title.textContent = kid ? kid.name + " — " + when.charAt(0).toLowerCase() + when.slice(1) : when;
     week.range.textContent = rangeLabel(shownMonday);
     week.current.classList.toggle("off", isCurrentWeek());
 
-    // dropdown of earlier weeks — hidden entirely when there are none
+    // dropdown of earlier weeks, or a short message when there are none
     var earlier = earlierMondays();
-    week.pickerWrap.hidden = earlier.length === 0;
+    week.pickerWrap.hidden = !kid;
+    week.picker.hidden = earlier.length === 0;
+    week.pickerEmpty.hidden = earlier.length > 0;
     if (earlier.length) {
       week.picker.textContent = "";
       week.picker.appendChild(option("", "Earlier weeks…", true));
@@ -1603,9 +1862,11 @@
     for (var i = 0; i < 7; i++) tallies.push(dayTally(addDays(shownMonday, i)));
 
     // One scale for both colours, so the taller bar really is the bigger number.
-    var top = Math.max(5, tallies.reduce(function (m, t) {
-      return Math.max(m, t.up, t.down);
+    var scale = niceScale(tallies.reduce(function (m, t) {
+      return Math.max(m, t.up, t.down, t.soso);
     }, 0));
+    var top = scale.top;
+    renderScale(scale);
 
     // An empty past week is worth saying out loud; an empty current week is
     // just a week that has not happened yet.
@@ -1624,7 +1885,7 @@
       col.className = "day" +
         (tallies[j].void ? " voided" : "") +
         (key === today ? " today" : "") +
-        (key === selectedKey ? " picked" : "") +
+        (key === selectedKey && dayShown() ? " picked" : "") +
         (fromYmd(key) > fromYmd(today) ? " future" : "");
 
       if (!isFuture(key)) {
@@ -1641,8 +1902,9 @@
       track.className = "track";
 
       // green: points given. red: points taken. Both measured the same way.
-      track.appendChild(oneBar("up", tally.up, top, "Given " + tally.up));
-      track.appendChild(oneBar("down", tally.down, top, "Taken " + tally.down));
+      track.appendChild(oneBar("up", tally.up, top, "Nailed it " + pts(tally.up)));
+      track.appendChild(oneBar("down", tally.down, top, "Missed it " + pts(tally.down)));
+      track.appendChild(oneBar("soso", tally.soso, top, growthLabel(tally.soso)));
 
       var val = document.createElement("span");
       val.className = "val";
@@ -1651,20 +1913,8 @@
         vv.className = "v-void";
         vv.textContent = "🚩 0";
         val.appendChild(vv);
+        track.appendChild(val);
       }
-      if (tally.up) {
-        var vu = document.createElement("span");
-        vu.className = "v-up";
-        vu.textContent = "+" + tally.up;
-        val.appendChild(vu);
-      }
-      if (tally.down) {
-        var vd = document.createElement("span");
-        vd.className = "v-down";
-        vd.textContent = "-" + tally.down;
-        val.appendChild(vd);
-      }
-      track.appendChild(val);
 
       var name = document.createElement("span");
       name.className = "day-name";
@@ -1693,22 +1943,16 @@
     var up = tallies.reduce(function (s, t) { return s + t.up; }, 0);
     var down = tallies.reduce(function (s, t) { return s + t.down; }, 0);
 
-    var word = document.createElement("span");
-    word.className = "wt-word";
-    word.textContent = "Week total";
-    week.totals.appendChild(word);
-
-    week.totals.appendChild(totalPill("up", "🙂", "+" + up));
-    week.totals.appendChild(totalPill("down", "🙁", "-" + down));
-
     var soso = tallies.reduce(function (s, t) { return s + t.soso; }, 0);
-    if (soso) week.totals.appendChild(totalPill("soso", "😐", String(soso)));
 
-    renderReward(up, down);
+    renderReward(up, down, soso);
+    renderExtra();
   }
 
-  // The reward is measured against the 🙂 side only — points taken never move
-  // it. Each kid has their own target, and it can be changed at any time.
+  // The reward counts 🙂 given, minus 🙁 taken, minus one more 🙁 for every
+  // five 😐 so so in the week. Each kid has their own target, and it can be
+  // changed at any time.
+  var SOSO_PER_SAD = 5;
   var DEFAULT_TARGET = 25;
 
   function rewardTarget(kidId) {
@@ -1716,55 +1960,479 @@
     return typeof n === "number" && n >= 1 ? n : DEFAULT_TARGET;
   }
 
-  function renderReward(up, down) {
+  function renderReward(up, down, soso) {
     var kid = shownKid();
     if (!kid) { week.reward.hidden = true; return; }
 
     var target = rewardTarget(kid.id);
 
-    // What counts towards the reward is what is left after the points taken:
-    // given minus taken, and never less than nothing.
-    var net = Math.max(0, up - down);
+    // Only whole groups of five count; the rest wait for the next ones.
+    var extra = Math.floor(soso / SOSO_PER_SAD);
+    var bonus = weekBonus(kid.id, shownMonday);
+    var net = Math.max(0, up + bonus - down - extra);
     var done = net >= target;
-
-    // One ruler for both bars and the target, so their lengths can be read
-    // against each other.
-    var scale = Math.max(target, up, down);
 
     week.reward.hidden = false;
     if (document.activeElement !== week.rewardTarget) week.rewardTarget.value = target;
+    // the target is set from the current week only
+    week.rewardTarget.disabled = !isCurrentWeek();
 
-    week.rewardFill.style.width = Math.round((up / scale) * 100) + "%";
-    week.rewardDownFill.style.width = Math.round((down / scale) * 100) + "%";
-
+    // one bar: how far the counted points have got towards the target
+    var pct = Math.min(100, Math.round((net / target) * 100));
+    week.rewardFill.style.width = pct + "%";
+    week.rewardFill.style.backgroundSize = pct ? (10000 / pct) + "% 100%" : "";
     week.rewardGoal.className = "rw-goal" + (done ? " lit" : "");
-    week.rewardGoal.style.left = Math.round((target / scale) * 100) + "%";
+    var ticks = week.rewardFill.parentNode.querySelectorAll(".rw-tick");
+    [25, 50, 75].forEach(function (p, k) {
+      var reached = net / target * 100 >= p;
+      week.rewardMarks.children[k].classList.toggle("hit", reached);
+      ticks[k].classList.toggle("hit", reached);
+    });
 
-    week.rewardNow.textContent = up + " given";
-    week.rewardDown.textContent = down + " taken";
-
-    // What is counted for the reward: given minus taken, against the target.
     week.rewardState.className = "rw-state" + (done ? " done" : "");
-    week.rewardState.textContent = done
-      ? "🎉 Reward earned — " + net + " of " + target
-      : net + " of " + target;
+    // just the points so far; the target next to it is the box you type in
+    week.rewardState.textContent = String(net);
+    week.rewardState.title = done ? "Reward earned" : "";
+
+    // what was added and what was taken away, each with a thin bar on one scale
+    var taken = down + extra;
+    var most = Math.max(up, taken, 1);
+    week.rewardPm.textContent = "";
+    var added = up + bonus;
+    most = Math.max(added, taken, 1);
+    week.rewardPm.appendChild(pmBox("plus", "Added", added ? "+" + added : "0",
+      [], [[bonus, "var(--extra)", "Extra " + pts(bonus), "Extra points"],
+          [up, "var(--good)", "Nailed it " + pts(up), "Nailed it"]], most));
+    week.rewardPm.appendChild(pmBox("minus", "Taken away", taken ? "−" + taken : "0",
+      [], [[extra, "#c9922f", growthLabel(soso) + " = " + pts(extra) + " taken away", "Working on it"],
+          [down, "var(--danger)", "Missed it " + pts(down), "Missed it"]], most));
   }
 
-  function totalPill(cls, face, text) {
-    var pill = document.createElement("span");
-    pill.className = "wt-pill " + cls;
+  // lines of text, then one thin bar made of [value, colour, hover text] parts laid end to end
+  function pmBox(cls, title, total, lines, parts, most) {
+    var box = document.createElement("div");
+    box.className = "pm " + cls;
 
-    var f = document.createElement("span");
-    f.className = "face";
-    f.textContent = face;
+    var words = document.createElement("div");
+    words.className = "pm-words";
+    var t = document.createElement("div");
+    t.className = "pm-t";
+    t.textContent = title;
+    words.appendChild(t);
 
-    var n = document.createElement("span");
-    n.textContent = text;
+    lines.forEach(function (line) {
+      var s = document.createElement("div");
+      s.className = "pm-sub";
+      s.textContent = line;
+      words.appendChild(s);
+    });
 
-    pill.appendChild(f);
-    pill.appendChild(n);
-    return pill;
+    var bar = document.createElement("div");
+    bar.className = "pm-bar";
+    parts.forEach(function (p) {
+      if (!p[0]) return;
+      var i = document.createElement("i");
+      i.style.width = (p[0] / most) * 100 + "%";
+      i.style.background = p[1];
+      i.dataset.tip = p[2];
+      bar.appendChild(i);
+    });
+
+    // hovering a part shows its detail straight away; the strip is taller than
+    // the bar so the thin line is easy to point at
+    var hit = document.createElement("div");
+    hit.className = "pm-hit";
+    var tip = document.createElement("span");
+    tip.className = "pm-tip";
+    tip.hidden = true;
+    hit.appendChild(bar);
+    hit.appendChild(tip);
+    hit.addEventListener("mousemove", function (e) {
+      var over = null;
+      Array.prototype.forEach.call(bar.children, function (i) {
+        var r = i.getBoundingClientRect();
+        if (e.clientX >= r.left - 1 && e.clientX <= r.right + 1) over = i;
+      });
+      if (!over) { tip.hidden = true; return; }
+      var box = hit.getBoundingClientRect(), r = over.getBoundingClientRect();
+      tip.textContent = over.dataset.tip;
+      tip.style.left = (r.left + r.width / 2 - box.left) + "px";
+      tip.hidden = false;
+    });
+    hit.addEventListener("mouseleave", function () { tip.hidden = true; });
+    words.appendChild(hit);
+
+    var key = document.createElement("div");
+    key.className = "pm-key";
+    parts.forEach(function (p) {
+      var k = document.createElement("span");
+      var sw = document.createElement("i");
+      sw.style.background = p[1];
+      k.appendChild(sw);
+      k.appendChild(document.createTextNode(p[3]));
+      key.appendChild(k);
+    });
+    words.appendChild(key);
+
+    var n = document.createElement("div");
+    n.className = "pm-num";
+    n.textContent = total;
+
+    box.appendChild(words);
+    box.appendChild(n);
+    return box;
   }
+
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+  function pts(n) { return plural(n, "point"); }
+
+  /* ---------- extra points: school test results ---------- */
+
+  var US_STATES = [
+    ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],
+    ["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],
+    ["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],
+    ["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],
+    ["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],
+    ["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],
+    ["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],
+    ["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],
+    ["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],
+    ["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]
+  ];
+
+  var SCHOOL_LEVELS = {
+    Elementary: ["VPK", "K", "1", "2", "3", "4", "5"],
+    Middle: ["6", "7", "8"],
+    High: ["9", "10", "11", "12"]
+  };
+  var GRADE_NAMES = { VPK: "Pre-K (VPK)", K: "Kindergarten" };
+
+  // Built-in test lists, one state at a time. Each test: [id, name, kind, note,
+  // windows it is given in]. Windows are 0 = fall, 1 = winter, 2 = spring.
+  // Florida: FLDOE 2025–26 Statewide Assessment Schedule (FAST PM1–PM3,
+  // B.E.S.T. Writing 4–10, Science 5 & 8, EOCs).
+  var FL_EOC = [0, 1, 2], ALL3 = [0, 1, 2], SPRING = [2];
+  var STATE_TESTS = {
+    FL: {
+      windows: function (grade) {
+        return grade === "VPK"
+          ? [["AP1", "Fall"], ["AP2", "Winter"], ["AP3", "Spring"]]
+          : [["PM1", "Fall"], ["PM2", "Winter"], ["PM3", "Spring"]];
+      },
+      grades: {
+        VPK: [["sel", "Star Early Literacy", "literacy", "FAST · VPK", ALL3]],
+        K:   [["sel", "Star Early Literacy", "literacy", "Reading", ALL3],
+              ["smath", "Star Mathematics", "math", "Math", ALL3]],
+        "1": [["sel", "Star Early Literacy", "literacy", "Reading", [0, 1]],
+              ["sread", "Star Reading", "reading", "Reading · switches from Early Literacy", SPRING],
+              ["smath", "Star Mathematics", "math", "Math", ALL3]],
+        "2": [["sel", "Star Early Literacy", "literacy", "Reading", ALL3],
+              ["sread", "Star Reading", "reading", "Reading", ALL3],
+              ["smath", "Star Mathematics", "math", "Math", ALL3]],
+        "3": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["fmath", "FAST Mathematics", "math", "Math", ALL3]],
+        "4": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
+              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING]],
+        "5": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
+              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
+              ["sci", "Statewide Science Assessment", "science", "Science", SPRING]],
+        "6": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
+              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING]],
+        "7": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
+              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
+              ["civics", "Civics EOC", "social", "End of course", FL_EOC]],
+        "8": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
+              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
+              ["sci", "Statewide Science Assessment", "science", "Science", SPRING],
+              ["alg1", "B.E.S.T. Algebra 1 EOC", "math", "End of course · if taking Algebra 1", FL_EOC]],
+        "9": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
+              ["alg1", "B.E.S.T. Algebra 1 EOC", "math", "End of course", FL_EOC],
+              ["bio", "Biology 1 EOC", "science", "End of course", FL_EOC]],
+        "10": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
+               ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
+               ["geo", "B.E.S.T. Geometry EOC", "math", "End of course", FL_EOC],
+               ["bio", "Biology 1 EOC", "science", "End of course", FL_EOC]],
+        "11": [["ush", "U.S. History EOC", "social", "End of course", FL_EOC]],
+        "12": []
+      }
+    }
+  };
+  var DEFAULT_WINDOWS = [["Fall", ""], ["Winter", ""], ["Spring", ""]];
+
+  var extraEl = {
+    card: document.getElementById("extraCard"),
+    week: document.getElementById("extraWeek"),
+    ask: document.getElementById("extraAsk"),
+    note: document.getElementById("extraNote"),
+    table: document.getElementById("extraTable"),
+    add: document.getElementById("extraAdd"),
+    addName: document.getElementById("extraAddName"),
+    addBtn: document.getElementById("extraAddBtn")
+  };
+
+  // tests[kidId] = { state, level, grade,
+  //   custom:  { grade: [ {id, name} ] },
+  //   results: { grade: { testId: { windowIndex: { score, extra, on } } } } }
+  function testsFor(kidId) {
+    if (!data.tests[kidId]) data.tests[kidId] = { state: "", level: "", grade: "", custom: {}, results: {} };
+    var t = data.tests[kidId];
+    if (!t.custom) t.custom = {};
+    if (!t.results) t.results = {};
+    return t;
+  }
+
+  // Extra points typed in during the week that starts on this Monday.
+  function weekBonus(kidId, monday) {
+    var t = data.tests[kidId];
+    if (!t || !t.results) return 0;
+    var from = ymd(monday), to = ymd(addDays(monday, 6)), sum = 0;
+    Object.keys(t.results).forEach(function (g) {
+      Object.keys(t.results[g]).forEach(function (id) {
+        var byWin = t.results[g][id];
+        Object.keys(byWin).forEach(function (w) {
+          var r = byWin[w];
+          if (r && r.extra > 0 && r.on >= from && r.on <= to) sum += r.extra;
+        });
+      });
+    });
+    return sum;
+  }
+
+  function testsForGrade(t) {
+    var st = STATE_TESTS[t.state];
+    var list = (st && st.grades[t.grade]) ? st.grades[t.grade].slice() : [];
+    (t.custom[t.grade] || []).forEach(function (c) {
+      list.push([c.id, c.name, "other", "Added by you", ALL3, true]);
+    });
+    return list;
+  }
+
+  function selectBox(label, options, value, placeholder, onChange, disabled) {
+    var l = document.createElement("label");
+    l.textContent = label;
+    var s = document.createElement("select");
+    s.disabled = !!disabled;
+    var p = document.createElement("option");
+    p.value = ""; p.textContent = placeholder;
+    s.appendChild(p);
+    options.forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = o[0]; op.textContent = o[1];
+      if (o[0] === value) op.selected = true;
+      s.appendChild(op);
+    });
+    s.addEventListener("change", function () { onChange(s.value); });
+    l.appendChild(s);
+    return l;
+  }
+
+  function renderExtra() {
+    var kid = shownKid();
+    if (!kid) { extraEl.card.hidden = true; return; }
+    extraEl.card.hidden = false;
+
+    var t = testsFor(kid.id);
+    var canEdit = isCurrentWeek();
+    var bonus = weekBonus(kid.id, shownMonday);
+    extraEl.week.innerHTML = "";
+    extraEl.week.appendChild(document.createTextNode(bonus === 1 ? "Total extra point " : "Total extra points "));
+    var b = document.createElement("b");
+    b.textContent = bonus ? "+" + bonus : "0";
+    extraEl.week.appendChild(b);
+
+    // one question after another: state, then school, then grade
+    extraEl.ask.textContent = "";
+    extraEl.ask.appendChild(selectBox("State", US_STATES, t.state, "Choose a state", function (v) {
+      t.state = v; save(); renderWeek();
+    }, !canEdit));
+    if (t.state) {
+      extraEl.ask.appendChild(selectBox("School", Object.keys(SCHOOL_LEVELS).map(function (k) { return [k, k]; }),
+        t.level, "Choose a school", function (v) {
+          t.level = v;
+          if (SCHOOL_LEVELS[v] && SCHOOL_LEVELS[v].indexOf(t.grade) === -1) t.grade = "";
+          save(); renderWeek();
+        }, !canEdit));
+    }
+    if (t.state && t.level) {
+      extraEl.ask.appendChild(selectBox("Grade", SCHOOL_LEVELS[t.level].map(function (g) {
+        return [g, GRADE_NAMES[g] || "Grade " + g];
+      }), t.grade, "Choose a grade", function (v) {
+        t.grade = v; save(); renderWeek();
+      }, !canEdit));
+    }
+
+    extraEl.table.textContent = "";
+    var ready = t.state && t.level && t.grade;
+    extraEl.add.hidden = !ready || !canEdit;
+    extraEl.note.hidden = true;
+    if (!ready) return;
+
+    var st = STATE_TESTS[t.state];
+    var list = testsForGrade(t);
+    if (!st) {
+      extraEl.note.hidden = false;
+      extraEl.note.textContent = "The built-in test list for this state is coming soon. Add the tests your school gives below.";
+    } else if (!list.length) {
+      extraEl.note.hidden = false;
+      extraEl.note.textContent = "No state tests are scheduled for this grade. You can add your own below.";
+    }
+    if (!list.length) return;
+
+    var wins = st ? st.windows(t.grade) : DEFAULT_WINDOWS;
+    var grid = document.createElement("div");
+    grid.className = "ex-grid";
+    grid.style.setProperty("--cols", wins.length);
+
+    var head = document.createElement("div");
+    head.className = "ex-row";
+    wins.forEach(function (w) {
+      var c = document.createElement("div");
+      c.className = "ex-colhead";
+      c.textContent = w[0];
+      if (w[1]) { var s = document.createElement("small"); s.textContent = w[1]; c.appendChild(s); }
+      head.appendChild(c);
+    });
+    grid.appendChild(head);
+
+    var results = t.results[t.grade] || (t.results[t.grade] = {});
+    list.forEach(function (test) {
+      var row = document.createElement("div");
+      row.className = "ex-row";
+      wins.forEach(function (w, wi) {
+        var cell = document.createElement("div");
+        if (test[4].indexOf(wi) === -1) {
+          cell.className = "ex-cell none";
+          cell.textContent = "Not given";
+          row.appendChild(cell);
+          return;
+        }
+        cell.className = "ex-cell s-" + test[2];
+
+        var name = document.createElement("div");
+        name.className = "ex-name";
+        var nm = document.createElement("span");
+        nm.textContent = test[1];
+        name.appendChild(nm);
+        if (test[5] && canEdit && wi === 0) {
+          var x = document.createElement("button");
+          x.type = "button";
+          x.textContent = "✕";
+          x.title = "Remove this test";
+          x.addEventListener("click", function () {
+            t.custom[t.grade] = (t.custom[t.grade] || []).filter(function (c) { return c.id !== test[0]; });
+            delete results[test[0]];
+            save(); renderWeek();
+          });
+          name.appendChild(x);
+        }
+        cell.appendChild(name);
+
+        var sub = document.createElement("div");
+        sub.className = "ex-sub";
+        sub.textContent = test[3];
+        cell.appendChild(sub);
+
+        var r = (results[test[0]] && results[test[0]][wi]) || {};
+        var ins = document.createElement("div");
+        ins.className = "ex-in";
+        ins.appendChild(numberField("Score", r.score, !canEdit, function (v) {
+          var rec = record(results, test[0], wi);
+          rec.score = v;
+          tidy(results, test[0], wi);
+          save();
+        }, false));
+        ins.appendChild(numberField("Extra points", r.extra, !canEdit, function (v) {
+          var rec = record(results, test[0], wi);
+          rec.extra = v;
+          rec.on = ymd(new Date());          // counts toward the week it was typed in
+          tidy(results, test[0], wi);
+          save();
+          renderWeek();
+        }, true));
+        cell.appendChild(ins);
+        row.appendChild(cell);
+      });
+      grid.appendChild(row);
+    });
+    extraEl.table.appendChild(grid);
+  }
+
+  function record(results, id, wi) {
+    if (!results[id]) results[id] = {};
+    if (!results[id][wi]) results[id][wi] = {};
+    return results[id][wi];
+  }
+
+  function tidy(results, id, wi) {
+    var r = results[id] && results[id][wi];
+    if (r && r.score == null && !r.extra) delete results[id][wi];
+    if (results[id] && !Object.keys(results[id]).length) delete results[id];
+  }
+
+  // A number box that saves when the parent leaves it (or presses Enter).
+  function numberField(label, value, disabled, onSave, points) {
+    var l = document.createElement("label");
+    l.textContent = label;
+    var i = document.createElement("input");
+    i.type = "number";
+    i.inputMode = "numeric";
+    i.min = "0";
+    i.step = "1";
+    i.placeholder = "—";
+    i.disabled = disabled;
+    if (value != null && value !== 0 || (value === 0 && !points)) i.value = value;
+    function commit() {
+      var raw = i.value.trim();
+      var n = raw === "" ? null : Math.max(0, Math.round(Number(raw)));
+      if (raw !== "" && !isFinite(n)) n = null;
+      onSave(points ? (n || 0) : n);
+    }
+    i.addEventListener("change", commit);
+    i.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); i.blur(); return; }
+      // whole numbers from zero up: no minus, plus, decimal point or exponent
+      if (e.key === "-" || e.key === "+" || e.key === "." || e.key === "," || e.key === "e" || e.key === "E") e.preventDefault();
+    });
+    i.addEventListener("input", function () {
+      var clean = i.value.replace(/[^0-9]/g, "");
+      if (clean !== i.value) i.value = clean;
+    });
+    i.addEventListener("paste", function (e) {
+      var text = (e.clipboardData || window.clipboardData).getData("text");
+      if (/[^0-9]/.test(text)) {
+        e.preventDefault();
+        i.value = text.replace(/[^0-9]/g, "");
+      }
+    });
+    l.appendChild(i);
+    return l;
+  }
+
+  function addCustomTest() {
+    var kid = shownKid();
+    if (!kid || !isCurrentWeek()) return;
+    var t = testsFor(kid.id);
+    var v = extraEl.addName.value.trim();
+    if (!v || !t.grade) { extraEl.addName.focus(); return; }
+    if (!t.custom[t.grade]) t.custom[t.grade] = [];
+    t.custom[t.grade].push({ id: "x" + uid(), name: v });
+    extraEl.addName.value = "";
+    save();
+    renderWeek();
+  }
+  extraEl.addBtn.addEventListener("click", addCustomTest);
+  extraEl.addName.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addCustomTest(); }
+  });
+
+  function growthLabel(n) { return "Working on it " + n; }
 
   // Whose jar is on screen. Points hang off the kid, so switching parent leaves
   // the chart exactly as it was — any parent may change the same numbers.
@@ -1823,10 +2491,6 @@
     return !!(data.redLine[kidId] && data.redLine[kidId][key]) || strikesOn(kidId, key) >= 3;
   }
 
-  function pulledByHand(kidId, key) {
-    return !!(data.redLine[kidId] && data.redLine[kidId][key]);
-  }
-
   function setRedLine(kidId, key, on) {
     if (on) {
       if (!data.redLine[kidId]) data.redLine[kidId] = {};
@@ -1837,9 +2501,12 @@
     save();
   }
 
-  // A title given both faces is a "so so" day for that title — the good and the
-  // bad cancel, so it counts as nothing on either side.
-  function isSoSo(m) { return !m.off && m.up > 0 && m.up === m.down; }
+  // A plain title given both faces is "Working on it" for that day. In a
+  // "More points" section both faces are just counted, so it never applies there.
+  function isSoSo(m, t) {
+    if (t && data.more[t.group]) return false;
+    return !m.off && m.up > 0 && m.up === m.down;
+  }
 
   // A day is two separate totals: points given (🙂) and points taken (🙁).
   function dayTally(date) {
@@ -1860,7 +2527,7 @@
     Object.keys(day).forEach(function (id) {
       var m = readMark(day[id]);
       if (m.off) return;
-      if (isSoSo(m)) { out.soso += 1; return; }   // cancels out: worth nothing
+      if (isSoSo(m, titleById(id))) { out.soso += 1; return; }
       out.up += m.up;
       out.down += m.down;
     });
@@ -1881,6 +2548,7 @@
 
   var day = {
     panel: document.getElementById("dayPanel"),
+    hint: document.getElementById("pickHint"),
     heading: document.getElementById("dayHeading"),
     total: document.getElementById("dayTotal"),
     btn: document.getElementById("titlesBtn"),
@@ -1893,7 +2561,6 @@
     marks: document.getElementById("marks"),
     redline: document.getElementById("redline"),
     redlineSub: document.getElementById("redlineSub"),
-    redlineBtn: document.getElementById("redlineBtn"),
     redlineReverse: document.getElementById("redlineReverse"),
     strikes: document.getElementById("strikes")
   };
@@ -1905,14 +2572,6 @@
     if (!kid || !editable()) return;
     setStrikes(kid.id, selectedKey, 0);
     setRedLine(kid.id, selectedKey, false);
-    renderWeek();
-  });
-
-  day.redlineBtn.addEventListener("click", function () {
-    var kid = shownKid();
-    if (!kid || !editable()) return;
-    if (strikesOn(kid.id, selectedKey) >= 3) return;   // the strikes hold it
-    setRedLine(kid.id, selectedKey, !pulledByHand(kid.id, selectedKey));
     renderWeek();
   });
 
@@ -1931,6 +2590,11 @@
   });
 
   var selectedKey = ymd(new Date());       // which day the rows below belong to
+
+  // In an earlier week nothing is shown below the chart until a day is tapped,
+  // so the cards never look like they belong to the whole week.
+  var dayChosen = false;
+  function dayShown() { return isCurrentWeek() || dayChosen; }
   var menuOpen = false;
 
   function isFuture(key) { return fromYmd(key) > midnight(new Date()); }
@@ -1954,27 +2618,35 @@
 
   function renderDay() {
     var kid = shownKid();
+
+    var showing = dayShown();
+    day.panel.hidden = !showing;
+    day.hint.hidden = showing || !kid;
+    if (!showing) { day.redline.hidden = true; return; }
     var d = fromYmd(selectedKey);
     var isToday = selectedKey === ymd(new Date());
 
     day.heading.textContent = (isToday ? "Today · " : "") + longDate(d) +
       (isToday ? "" : "  🔒");
 
-    day.panel.classList.toggle("locked", !editable());
+    day.panel.classList.toggle("locked", !marksEditable());
 
     var sum = dayTally(d);
     day.total.textContent = !kid ? ""
       : sum.void ? "🚩 Red Line — this day is zero"
       : sum.marked
-        ? [sum.up ? "+" + sum.up + " given" : "",
-           sum.down ? "-" + sum.down + " taken" : "",
-           sum.soso ? "😐 " + sum.soso + " so so" : ""
+        ? [sum.up ? "Nailed it +" + sum.up : "",
+           sum.down ? "Missed it -" + sum.down : "",
+           sum.soso ? growthLabel(sum.soso) : ""
           ].filter(Boolean).join(" · ")
         : "";
     day.total.className = "day-total";
 
     renderIconPicker();
 
+    // titles are only managed from the current week; earlier weeks are a record
+    if (!isCurrentWeek()) menuOpen = false;
+    day.btn.hidden = !isCurrentWeek();
     day.menu.hidden = !menuOpen;
     day.btn.setAttribute("aria-expanded", menuOpen ? "true" : "false");
     day.btn.textContent = menuOpen ? "Titles ▴" : "Titles ▾";
@@ -1986,39 +2658,39 @@
 
     var strikes = strikesOn(kid.id, selectedKey);
     var voided = isRedLined(kid.id, selectedKey);
-    var byHand = pulledByHand(kid.id, selectedKey);
 
-    day.redline.hidden = false;
+    // In an earlier week the Red Line is only a record: it shows up when
+    // something happened that day, and has no buttons to press.
+    var past = !isCurrentWeek();
+    day.redline.hidden = past && !voided && !strikes;
     day.redline.classList.toggle("on", voided);
     day.redlineSub.textContent =
-      strikes >= 3 ? "Third strike — this day counts as nothing."
-      : voided ? "This day counts as nothing — every point is wiped."
-      : strikes === 1 ? "One warning given. Two more and the day is gone."
-      : strikes === 2 ? "Two warnings given. One more and the day is gone."
-      : "Three strikes pull it, or pull it straight away.";
+      strikes >= 3 ? "3 flags — this day counts as zero."
+      : voided ? "This day counts as zero."
+      : past && strikes === 1 ? "1 flag was given."
+      : past && strikes === 2 ? "2 flags were given."
+      : strikes === 1 ? "1 flag given. Two more and the day counts as zero."
+      : strikes === 2 ? "2 flags given. One more and the day counts as zero."
+      : "Give a flag for each warning. Three flags and the day counts as zero.";
 
-    day.redlineBtn.textContent = byHand ? "Undo" : "Pull the red line";
-    day.redlineBtn.disabled = !editable() || strikes >= 3;
-    day.redlineBtn.hidden = voided && !byHand;
+    // one press clears every flag (and an older hand-pulled red line)
+    // its place is kept while there is nothing to clear, so the flags never shift
+    day.redlineReverse.hidden = !editable();
+    day.redlineReverse.classList.toggle("off", !(voided || strikes > 0));
 
-    // one press to undo everything — the line and any strikes behind it
-    day.redlineReverse.hidden = !(voided || strikes > 0);
-    day.redlineReverse.disabled = !editable();
-
-    // the three strike buttons
+    // the three flags
     day.strikes.textContent = "";
-    var label = document.createElement("span");
-    label.className = "strike-label";
-    label.textContent = "Strikes";
-    day.strikes.appendChild(label);
 
     [1, 2, 3].forEach(function (n) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "strike" + (strikes >= n ? " hit" : "");
-      b.textContent = n;
+      var fl = document.createElement("span");
+      fl.className = "fl";
+      fl.textContent = "🚩";
+      b.appendChild(fl);
       b.disabled = !editable();
-      b.title = strikes >= n ? "Take this strike back" : "Strike " + n;
+      b.title = strikes >= n ? "Take flag " + n + " back" : "Give flag " + n;
       b.setAttribute("aria-label", b.title);
       b.addEventListener("click", function () {
         if (!editable()) return;
@@ -2043,7 +2715,11 @@
 
       var h = document.createElement("h4");
       h.className = "section";
-      h.textContent = section;
+      var hn = document.createElement("span");
+      hn.textContent = section;
+      h.appendChild(hn);
+      // a section setting, so only from the current week (earlier weeks are a record)
+      if (isCurrentWeek()) h.appendChild(moreToggle(section));
       day.marks.appendChild(h);
 
       var list = document.createElement("ul");
@@ -2059,7 +2735,7 @@
       var m = readMark(dayMarks[t.id]);
 
       var li = document.createElement("li");
-      var soso = isSoSo(m);
+      var soso = isSoSo(m, t);
 
       li.className = "mark" +
         (m.off ? " off" : soso ? " soso" : m.up ? " up" : m.down ? " down" : "");
@@ -2072,7 +2748,7 @@
         var ms = document.createElement("span");
         ms.className = "t-soso";
         ms.textContent = "😐 0";
-        ms.title = "Good and bad cancelled out — counts as nothing";
+        ms.title = "Working on it: this topic needs more focus";
         mid.appendChild(ms);
         li.appendChild(mid);
 
@@ -2097,13 +2773,18 @@
 
       var emo = document.createElement("span");
       emo.className = "emo";
-      emo.title = "Change the icon";
       iconInto(emo, t);
-      emo.addEventListener("click", function () {
-        picking = t.id;
-        renderDay();
-        pick.wrap.scrollIntoView({ block: "nearest" });
-      });
+      // icons are changed from the current week only
+      if (isCurrentWeek()) {
+        emo.title = "Change the icon";
+        emo.addEventListener("click", function () {
+          picking = t.id;
+          renderDay();
+          pick.wrap.scrollIntoView({ block: "nearest" });
+        });
+      } else {
+        emo.classList.add("fixed");
+      }
 
       var label = document.createElement("span");
       label.className = "label";
@@ -2114,11 +2795,11 @@
       // Wipe this card back to nothing — both sides at once. Two taps, so a
       // long-earned +16 cannot vanish by accident, and what was cleared is kept
       // so it can be brought back.
-      // Only sections set to "More points" can pile numbers up, so only they
-      // need a way to wipe them. A plain card is undone by tapping its own face.
-      var canClear = !!data.more[t.group];
+      // Every card can be cleared and brought back, whether or not its section
+      // allows more points.
+      var canClear = true;
 
-      if (canClear && (m.up || m.down) && editable()) {
+      if (canClear && (m.up || m.down) && marksEditable()) {
         var armed = clearArm === t.id;
         var wipe = document.createElement("button");
         wipe.type = "button";
@@ -2143,15 +2824,16 @@
         });
         li.appendChild(wipe);
 
-      } else if (canClear && !m.up && !m.down && editable() && stashed(t.id)) {
+      } else if (canClear && !m.up && !m.down && marksEditable() && stashed(t.id)) {
         // Cleared by mistake? The old numbers are still here until something
         // new is tapped on this card.
         var old = stashed(t.id);
         var back = document.createElement("button");
         back.type = "button";
         back.className = "wipe undo";
-        back.textContent = "undo +" + old.up + "/-" + old.down;
-        back.title = "Bring back the cleared points";
+        back.textContent = "↩";
+        back.title = "Bring back the cleared points (+" + old.up + " / -" + old.down + ")";
+        back.setAttribute("aria-label", back.title + " — " + t.name);
         back.addEventListener("click", function () {
           var kid = shownKid();
           if (!kid) return;
@@ -2168,14 +2850,14 @@
       if (soso) {
         word = document.createElement("span");
         word.className = "soso-word";
-        word.textContent = "So so — not good, not bad";
-        word.title = "The good and the bad cancelled out — counts as nothing";
+        word.textContent = "Needs more focus";
+        word.title = "Marked both 🙂 and 🙁 today. Every 5 Working on it marks in a week take away 1 point.";
       }
 
       var states = document.createElement("div");
       states.className = "states";
-      states.appendChild(stateBtn("up", "🙂", 1, m, t, "Give a point"));
-      states.appendChild(stateBtn("down", "🙁", -1, m, t, "Take a point"));
+      states.appendChild(stateBtn("up", "🙂", 1, m, t, "Nailed it"));
+      states.appendChild(stateBtn("down", "🙁", -1, m, t, "Missed it"));
       states.appendChild(stateBtn("skip", "⊘", 0, m, t,
         m.off ? (m.up || m.down ? "Switch back on and bring the points back" : "Switch back on")
               : "Does not apply today"));
@@ -2202,8 +2884,10 @@
     b.type = "button";
     b.className = "state " + cls + (lit ? " on" : "");
     b.textContent = glyph;
-    b.disabled = !editable();
-    b.title = editable() ? label : "Earlier days cannot be changed";
+    b.disabled = !marksEditable();
+    b.title = marksEditable() ? label
+      : editable() ? "This day counts as zero — clear the flags to change points"
+      : "Earlier days cannot be changed";
     b.setAttribute("aria-label", label + " — " + title.name);
     b.addEventListener("click", function () { setMark(title, value); });
     return b;
@@ -2232,9 +2916,16 @@
   // Only today can be changed. What a past day holds is a record of that day.
   function editable() { return selectedKey === ymd(new Date()); }
 
+  // A day that counts as zero keeps its titles locked until the flags are cleared.
+  function dayZeroed() {
+    var kid = shownKid();
+    return !!kid && isRedLined(kid.id, selectedKey);
+  }
+  function marksEditable() { return editable() && !dayZeroed(); }
+
   function setMark(t, value) {
     var kid = shownKid();
-    if (!kid || !editable()) return;
+    if (!kid || !marksEditable()) return;
 
     var dayMarks = marksFor(kid.id, selectedKey, true);
     var m = readMark(dayMarks[t.id]);
@@ -2308,6 +2999,7 @@
   }
 
   function renderIconPicker() {
+    if (!isCurrentWeek()) picking = null;   // no icon changes from an earlier week
     var t = picking ? titleById(picking) : null;
     if (!t) { picking = null; pick.wrap.hidden = true; return; }
 
@@ -2363,6 +3055,26 @@
     reader.readAsDataURL(file);
   }
 
+  // The "More points" switch for a section. It lives both in the Titles menu and
+  // next to the section name on the day, and both change the same setting.
+  function moreToggle(section) {
+    var on = !!data.more[section];
+    var ask = document.createElement("button");
+    ask.type = "button";
+    ask.className = "ask-more" + (on ? " open" : "");
+    ask.setAttribute("aria-pressed", on ? "true" : "false");
+    ask.textContent = (on ? "✓ " : "") + "More points";
+    ask.title = on
+      ? "Tapping 🙂 again adds another point"
+      : "Allow more than one point per title";
+    ask.addEventListener("click", function () {
+      data.more[section] = !on;
+      save();
+      renderWeek();
+    });
+    return ask;
+  }
+
   function renderTitlesMenu() {
     day.list.textContent = "";
 
@@ -2380,23 +3092,7 @@
 
       // With this ticked, 🙂 can be tapped again and again on this section's
       // titles — each tap is one more point, and 🙁 takes one back.
-      if (inSection.length) {
-        var on = !!data.more[section];
-        var ask = document.createElement("button");
-        ask.type = "button";
-        ask.className = "ask-more" + (on ? " open" : "");
-        ask.setAttribute("aria-pressed", on ? "true" : "false");
-        ask.textContent = (on ? "✓ " : "") + "More points";
-        ask.title = on
-          ? "Tapping 🙂 again adds another point"
-          : "Allow more than one point per title";
-        ask.addEventListener("click", function () {
-          data.more[section] = !on;
-          save();
-          renderWeek();
-        });
-        h.appendChild(ask);
-      }
+      if (inSection.length) h.appendChild(moreToggle(section));
 
       day.list.appendChild(h);
 
@@ -2690,14 +3386,19 @@
   });
 
   function addTitle() {
-    var v = day.newTitle.value.trim();
-    if (!v) { day.newTitle.focus(); return; }
-    var dup = data.titles.some(function (t) { return t.name.toLowerCase() === v.toLowerCase(); });
-    if (dup) { day.newTitle.select(); return; }
-
-    var fresh = { id: "c" + uid(), name: v, emoji: "⭐", group: "Other", on: true, stock: false };
-    data.titles.push(fresh);
+    if (!createTitle(day.newTitle.value, "Other")) { day.newTitle.focus(); day.newTitle.select(); return; }
     day.newTitle.value = "";
+  }
+
+  // Makes a title in the given section. False when the name is empty or taken.
+  function createTitle(name, group) {
+    var v = String(name || "").trim();
+    if (!v) return false;
+    var dup = data.titles.some(function (t) { return t.name.toLowerCase() === v.toLowerCase(); });
+    if (dup) return false;
+
+    var fresh = { id: "c" + uid(), name: v, emoji: "⭐", group: group, on: true, stock: false };
+    data.titles.push(fresh);
     save();
 
     // A new title lands with a placeholder star, so the icon picker opens
@@ -2707,6 +3408,7 @@
     picking = fresh.id;
     renderWeek();
     pick.wrap.scrollIntoView({ block: "nearest" });
+    return true;
   }
 
   day.addTitle.addEventListener("click", addTitle);
@@ -2717,7 +3419,7 @@
   // A target of nothing makes no sense, so anything below 1 is pulled back up.
   function saveTarget(commit) {
     var kid = shownKid();
-    if (!kid) return;
+    if (!kid || !isCurrentWeek()) return;
 
     var n = parseInt(week.rewardTarget.value, 10);
     if (!(n >= 1)) {
@@ -2732,6 +3434,12 @@
     renderWeek();
   }
 
+  week.rewardInfoBtn.addEventListener("click", function () {
+    var open = week.rewardInfo.hidden;
+    week.rewardInfo.hidden = !open;
+    week.rewardInfoBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
   week.rewardTarget.addEventListener("input", function () { saveTarget(false); });
   week.rewardTarget.addEventListener("change", function () { saveTarget(true); });
   week.rewardTarget.addEventListener("blur", function () { saveTarget(true); });
@@ -2739,11 +3447,14 @@
   week.picker.addEventListener("change", function () {
     if (!week.picker.value) return;
     shownMonday = fromYmd(week.picker.value);
+    dayChosen = false;
     renderWeek();
   });
 
   week.current.addEventListener("click", function () {
     shownMonday = thisMonday;
+    selectedKey = ymd(new Date());
+    dayChosen = false;
     renderWeek();
   });
 
@@ -2842,12 +3553,14 @@
       if (!Array.isArray(data.titles) || !data.titles.length) data.titles = seedTitles();
       fixGroups(data.titles);
       if (!data.startedOn) data.startedOn = ymd(new Date());
+      if (!data.cleared) data.cleared = {};
+      if (!data.tests) data.tests = {};
 
       KINDS.forEach(function (kind) { setActive(kind, null); });   // ask again
       save();
       render();
       renderWeek();
-      say("Restored " + data.parents.length + " parents, " + data.kids.length + " kids.");
+      say("Restored " + plural(data.parents.length, "parent") + " and " + plural(data.kids.length, "kid") + ".");
     };
     reader.readAsText(file);
   });
