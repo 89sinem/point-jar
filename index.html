@@ -17,7 +17,7 @@
      opened offline these simply fall back to the system fonts below. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=Caveat:wght@500;700&family=Patrick+Hand&family=Permanent+Marker&family=Special+Elite&display=swap" rel="stylesheet">
 
 <style>
   /* ---------- palettes ----------
@@ -149,7 +149,10 @@
   }
 
   /* Setup strip: a small side control, not part of the main app surface. */
-  .setup { margin-bottom: 16px; }
+  /* one even gap between every block on the page, top to bottom */
+  .setup, .week-bar, .notes-area, .week, .extra, .redline, .pick-hint, .day-panel { margin: 0 0 var(--block-gap); }
+  :root { --block-gap: 16px; }
+  @media (max-width: 700px) { :root { --block-gap: 12px; } }
   .setup .card { border-radius: 10px; box-shadow: none; background: transparent; }
   .setup .card-head { padding: 8px 10px 4px; align-items: center; gap: 6px; }
   .setup .card-head h3 { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
@@ -310,6 +313,148 @@
     gap: 8px; text-align: center; padding: 4px 8px; min-height: 10px;
   }
   /* keeps its column once answered, so the two boxes stay left and right */
+  /* ---------- notes: a sticky-note board, one note per kid per day ---------- */
+
+  .notes-area:empty { display: none; }
+  .week-bar { padding: 16px 18px; }
+  .week-bar .week-head { margin-bottom: 0; }
+  /* kid chosen: week controls on the left, the kid and the week on the right */
+  .week-bar .week-when { order: 3; text-align: right; }
+  .week-bar .wk-picker { order: 1; opacity: .6; transition: opacity .15s ease; }
+  .week-bar .wk-picker:hover, .week-bar .wk-picker:focus-within { opacity: 1; }
+  .week-bar .wk-btn { order: 2; }
+  .week-bar .wk-btn.off { display: none; }
+  /* nobody chosen yet: just the week, in the middle */
+  .week-bar.no-kid .week-when { text-align: center; }
+  .week-bar.no-kid .wk-btn { display: none; }
+
+  :root {
+    --board: #eadfcb; --board-dot: rgba(74,63,44,.10); --board-line: #dccfb6;
+    --sticky-ink: #3b3320; --sticky-shadow: 0 6px 12px rgba(74,63,44,.16);
+    --n-yellow: #fde9a3; --n-pink: #f9d1d5; --n-green: #d6ecc6;
+    --n-blue: #cfe3f5; --n-purple: #e3d6f3; --n-orange: #fbd9b8;
+  }
+  /* on dark pages the board goes dark and the paper dims, so nothing glares */
+  :root[data-theme="dark"] {
+    --board: #2a2c25; --board-dot: rgba(255,255,255,.06); --board-line: #3a3d34;
+    --sticky-ink: #2a2617; --sticky-shadow: 0 6px 14px rgba(0,0,0,.45);
+    --n-yellow: #d9c47a; --n-pink: #d6aab0; --n-green: #aecb9b;
+    --n-blue: #a8c2da; --n-purple: #bfaed6; --n-orange: #d8b28d;
+  }
+
+  .nb-left { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; flex: 1 1 auto; min-width: 0; }
+  .nb-sub { margin-left: auto; white-space: nowrap; }
+  /* on a phone the middle question area has nothing to show most of the time */
+  @media (max-width: 639px) { .ask-area:empty { display: none; } }
+  .nb-colors { display: flex; gap: 6px; }
+  .nb-colors button {
+    width: 17px; height: 17px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 1.5px solid rgba(0,0,0,.22); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
+  }
+  .nb-colors button.on { border: 2px solid var(--text); transform: scale(1.15); }
+  :root[data-theme="dark"] .nb-colors button { border-color: rgba(255,255,255,.25); }
+  :root[data-theme="dark"] .nb-colors button.on { border-color: var(--text); }
+
+  .notes-board {
+    border: 1px solid var(--board-line); border-radius: 12px; padding: 10px 14px 16px;
+    background-color: var(--board);
+    background-image: radial-gradient(var(--board-dot) 1px, transparent 1px); background-size: 10px 10px;
+  }
+  .nb-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .nb-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .nb-sub { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .stickies { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px 16px; }
+
+  .sticky {
+    position: relative; min-height: 132px; padding: 24px 12px 10px; border-radius: 2px;
+    background: var(--n-yellow); color: var(--sticky-ink); box-shadow: var(--sticky-shadow);
+    font-family: "Caveat", "Segoe Print", "Bradley Hand", cursive; font-size: 21px; line-height: 1.12;
+    transition: transform .15s ease, box-shadow .15s ease; cursor: pointer; text-align: left;
+  }
+  .sticky:nth-child(4n+1) { transform: rotate(-2deg); }
+  .sticky:nth-child(4n+2) { transform: rotate(1.4deg); }
+  .sticky:nth-child(4n+3) { transform: rotate(-.8deg); }
+  .sticky:nth-child(4n)   { transform: rotate(2deg); }
+  .sticky:hover { transform: rotate(0) translateY(-2px); }
+  .sticky.open { transform: rotate(0); cursor: default; box-shadow: var(--sticky-shadow), 0 0 0 2px var(--accent); }
+  .sticky::after {                                    /* a strip of tape */
+    content: ""; position: absolute; top: -8px; left: 50%; width: 48px; height: 16px;
+    transform: translateX(-50%) rotate(-3deg); background: rgba(255,255,255,.5);
+  }
+  :root[data-theme="dark"] .sticky::after { background: rgba(255,255,255,.22); }
+  .sticky .st-day {
+    position: absolute; top: 6px; left: 10px; right: 10px; display: flex; justify-content: space-between;
+    font-family: var(--font-body); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: rgba(0,0,0,.5);
+  }
+  .sticky .st-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* writing styles: the same classes dress the note and its "Aa" button */
+  .f-hand   { font-family: "Caveat", "Segoe Print", "Bradley Hand", cursive; }
+  .f-neat   { font-family: "Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive; }
+  .f-marker { font-family: "Permanent Marker", "Marker Felt", "Comic Sans MS", cursive; }
+  .f-type   { font-family: "Special Elite", "American Typewriter", "Courier New", monospace; }
+  .f-plain  { font-family: var(--font-body); }
+  .sticky.f-hand   { font-size: 21px; line-height: 1.12; }
+  .sticky.f-neat   { font-size: 18px; line-height: 1.2; }
+  .sticky.f-marker { font-size: 16px; line-height: 1.3; }
+  .sticky.f-type   { font-size: 15px; line-height: 1.35; }
+  .sticky.f-plain  { font-size: 14.5px; line-height: 1.4; }
+  .sticky .st-day { font-family: var(--font-body); }
+  .nb-fonts { display: flex; gap: 4px; padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--board-line); }
+  .nb-fonts button {
+    min-width: 30px; height: 24px; padding: 0 6px; border-radius: 6px; cursor: pointer;
+    border: 1px solid transparent; background: transparent; color: var(--text); font-size: 15px; line-height: 1;
+  }
+  .nb-fonts button:hover { background: rgba(0,0,0,.05); }
+  :root[data-theme="dark"] .nb-fonts button:hover { background: rgba(255,255,255,.07); }
+  .nb-fonts button.on { background: var(--panel); border-color: var(--text); }
+  .nb-fonts .st-strike-btn { font-family: var(--font-body); font-size: 14px; font-weight: 700; margin-left: 4px; }
+  .st-strike { text-decoration: line-through; text-decoration-thickness: 2px; }
+
+  /* pen colours; the paper stays light in both themes so these stay readable */
+  :root { --ink-ink: #2f2a1c; --ink-blue: #1f4f9a; --ink-red: #b3261e; --ink-green: #2e6b2f; }
+  .ink-ink { color: var(--ink-ink); } .ink-blue { color: var(--ink-blue); }
+  .ink-red { color: var(--ink-red); } .ink-green { color: var(--ink-green); }
+  .nb-pens { display: flex; gap: 6px; align-items: center; padding-left: 10px; border-left: 1px solid var(--board-line); }
+  .nb-pens button {
+    width: 26px; height: 26px; padding: 3px; cursor: pointer; border: 1px solid transparent; border-radius: 7px;
+    background: transparent; color: var(--c); opacity: .6; transition: opacity .12s ease, transform .12s ease;
+  }
+  .nb-pens button svg { display: block; width: 100%; height: 100%; }
+  .nb-pens button:hover { opacity: .9; }
+  .nb-pens button.on { opacity: 1; background: var(--panel); border-color: var(--text); transform: translateY(-1px); }
+  .pen-ink { --c: var(--ink-ink); } .pen-blue { --c: var(--ink-blue); } .pen-red { --c: var(--ink-red); } .pen-green { --c: var(--ink-green); }
+  :root[data-theme="dark"] .pen-ink { --c: #cfc8b4; }
+
+  .nb-fonts button.f-marker { font-size: 12px; } .nb-fonts button.f-type { font-size: 13px; } .nb-fonts button.f-plain { font-size: 13px; }
+  /* earlier days: smaller and faded; pointing at one (or opening it) brings it up to read */
+  .sticky.past { opacity: .6; filter: saturate(.7); scale: .78; transform-origin: center top;
+    transition: scale .18s ease, opacity .18s ease, filter .18s ease, transform .18s ease; }
+  .sticky.past:hover, .sticky.past:focus-visible, .sticky.past.open {
+    scale: 1.08; opacity: 1; filter: none; z-index: 3; position: relative; }
+  .sticky .st-text.empty { opacity: .45; }
+  .st-edit {
+    min-height: 78px; outline: none; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere;
+    color: inherit; caret-color: var(--sticky-ink);
+  }
+  .st-edit.is-empty::before { content: attr(data-placeholder); color: rgba(0,0,0,.4); pointer-events: none; }
+  /* every piece of text keeps the size that suits its own style */
+  .st-edit .f-hand, .st-text .f-hand, .st-edit.f-hand     { font-size: 21px; line-height: 1.12; }
+  .st-edit .f-neat, .st-text .f-neat, .st-edit.f-neat     { font-size: 18px; line-height: 1.2; }
+  .st-edit .f-marker, .st-text .f-marker, .st-edit.f-marker { font-size: 16px; line-height: 1.3; }
+  .st-edit .f-type, .st-text .f-type, .st-edit.f-type     { font-size: 15px; line-height: 1.35; }
+  .st-edit .f-plain, .st-text .f-plain, .st-edit.f-plain  { font-size: 14.5px; line-height: 1.4; }
+  .st-empty { grid-column: 1 / -1; font-size: 13px; color: var(--muted); padding: 6px 2px; }
+
+  .n-yellow { background: var(--n-yellow); } .n-pink { background: var(--n-pink); }
+  .n-green { background: var(--n-green); }   .n-blue { background: var(--n-blue); }
+  .n-purple { background: var(--n-purple); } .n-orange { background: var(--n-orange); }
+
+  @media (max-width: 700px) {
+    .stickies { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+    .sticky { min-height: 118px; font-size: 19px; }
+  }
+
   .ask-area .ask-q { font-family: var(--font-title); font-weight: 600; font-size: 18px; }
   .ask-area .who-picks { justify-content: center; }
   .ask-area .who-pick { font-size: 14px; padding: 6px 16px; }
@@ -337,7 +482,7 @@
 
   /* ---------- week ---------- */
 
-  .week { margin: 18px 0; padding: 20px 18px 24px; }
+  .week { padding: 20px 18px 24px; }
   .week-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
   .week-when { flex: 1; min-width: 0; text-align: center; }
   .week-when h2 {
@@ -599,6 +744,7 @@
     /* the week header stacks: picker, then the title, then Current week */
     .week-head { flex-wrap: wrap; justify-content: center; gap: 8px; }
     .week-when { flex: 1 1 100%; order: -1; }
+    .week-bar .week-when { order: -1; text-align: center; }
   }
 
   /* ---------- the selected day ---------- */
@@ -840,12 +986,12 @@
   /* its own card, with air around it */
   .redline {
     display: flex; align-items: center; flex-wrap: wrap; gap: 12px 14px;
-    margin-bottom: 18px; padding: 16px 18px;
+    padding: 16px 18px;
   }
   .redline[hidden] { display: none; }
   .day-panel[hidden] { display: none; }
   /* ---------- extra points: school test results ---------- */
-  .extra { margin: 0 0 18px; padding: 18px 18px 20px; }
+  .extra { padding: 18px 18px 20px; }
   .extra[hidden] { display: none; }
   .ex-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .ex-head h2 { margin: 0; font-family: var(--font-title); font-weight: 600; font-size: 20px; }
@@ -917,7 +1063,7 @@
     .ex-ask label { flex: 1 1 30%; }
   }
 
-  .pick-hint { margin: 0; padding: 18px; text-align: center; color: var(--muted); font-size: 14px; font-weight: 600; }
+  .pick-hint { padding: 18px; text-align: center; color: var(--muted); font-size: 14px; font-weight: 600; }
   .pick-hint[hidden] { display: none; }
   .redline .rl-flag { font-size: 26px; line-height: 1; }
   /* the words never squeeze to one-word-per-line: they take a new row instead */
@@ -1078,7 +1224,8 @@
 
   </div>
 
-  <section class="week card" id="weekCard">
+  <!-- the week being looked at: drives the notes and the chart below together -->
+  <section class="week-bar card" id="weekBar">
     <div class="week-head">
       <label class="wk-picker" id="weekPickerWrap" hidden>
         <span class="sr">Go to an earlier week</span>
@@ -1091,6 +1238,11 @@
       </div>
       <button class="wk-btn off" id="currentWeekBtn" type="button">Current week</button>
     </div>
+  </section>
+
+  <div class="notes-area" id="notesArea"></div>
+
+  <section class="week card" id="weekCard">
 
     <div class="chart">
       <div class="axis" id="chartAxis" aria-hidden="true"></div>
@@ -1128,7 +1280,7 @@
         <ul>
           <li><span>🙂</span><span>Each <b>Nailed it</b> adds 1 point.</span></li>
           <li><span>🙁</span><span>Each <b>Missed it</b> takes away 1 point.</span></li>
-          <li><span>😐</span><span>Behaviour can change during the day, so you can give a title both 🙂 and 🙁 on the same day. When that happens, the title is marked <b>Working on it</b> — a topic that needs more focus. Every 5 Working on it marks in a week take away 1 point.</span></li>
+          <li><span>😐</span><span>Behaviour can change during the day, so you can give a title both 🙂 and 🙁 on the same day. In sections where <b>More points</b> is turned off, that title is marked <b>Working on it</b> — a topic that needs more focus — and every 5 Working on it marks in a week take away 1 point.</span></li>
           <li><span>🚩</span><span>A day with the Red Line pulled counts as zero.</span></li>
           <li><span>⭐</span><span><b>Extra points</b> from school test results are added to the week they are entered.</span></li>
         </ul>
@@ -1340,13 +1492,14 @@
           if (!d.reward || typeof d.reward !== "object") d.reward = {};
           if (!d.cleared || typeof d.cleared !== "object") d.cleared = {};
           if (!d.tests || typeof d.tests !== "object") d.tests = {};
+          if (!d.notes || typeof d.notes !== "object") d.notes = {};
           if (!d.startedOn) d.startedOn = ymd(new Date());
           return d;
         }
       }
     } catch (e) {}
     return {
-      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {}, tests: {},
+      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {}, tests: {}, notes: {},
       titles: seedTitles(), startedOn: ymd(new Date())
     };
   }
@@ -1686,10 +1839,522 @@
     el[kind].box.hidden = !(on || busy);
   }
 
+  // notes[kidId][YYYY-MM-DD] = { text, color }   (older notes are plain text)
+  var NOTE_COLORS = ["yellow", "pink", "green", "blue", "purple", "orange"];
+  var notesShownFor = "";
+  var notesArea = document.getElementById("notesArea");
+
+  function noteFor(kidId, key) {
+    var n = data.notes[kidId] && data.notes[kidId][key];
+    if (!n) return { text: "", color: "", font: "", strike: false, ink: "", runs: null };
+    if (typeof n === "string") return { text: n, color: "", font: "", strike: false, ink: "", runs: null };
+    return { text: n.text || "", color: n.color || "", font: n.font || "", strike: !!n.strike, ink: n.ink || "", runs: Array.isArray(n.runs) ? n.runs : null };
+  }
+
+  // The pieces of a note in order, each [text, style]. Older notes are one piece.
+  function noteRuns(n) {
+    if (n.runs && n.runs.length) return n.runs.filter(function (r) { return r && typeof r[0] === "string"; });
+    return n.text ? [[n.text, noteFont(n)]] : [];
+  }
+
+  // writing styles for a note; the first is the one every note starts with
+  var NOTE_FONTS = [["hand", "Handwriting"], ["neat", "Neat"], ["marker", "Marker"], ["type", "Typewriter"], ["plain", "Plain"]];
+  function noteFont(n) {
+    return NOTE_FONTS.some(function (f) { return f[0] === n.font; }) ? n.font : "hand";
+  }
+
+  // each weekday has its own paper colour until a parent picks another
+  function noteColor(n, key) {
+    if (n.color && NOTE_COLORS.indexOf(n.color) !== -1) return n.color;
+    return NOTE_COLORS[(fromYmd(key).getDay() + 6) % 7 % NOTE_COLORS.length];
+  }
+
+  // runs: pass them when the text changed; leave undefined to keep what is stored
+  function saveNote(kidId, key, text, color, font, runs, strike, ink) {
+    if (!data.notes[kidId]) data.notes[kidId] = {};
+    var old = noteFor(kidId, key);
+    var c = color !== undefined ? color : old.color;
+    var f = font !== undefined ? font : old.font;
+    var r = runs !== undefined ? runs : old.runs;
+    var s = strike !== undefined ? strike : old.strike;
+    var k = ink !== undefined ? ink : old.ink;
+    if (text.trim() || c || f || s || k) {
+      var rec = { text: text, color: c, font: f };
+      if (s) rec.strike = true;
+      if (k && k !== "ink") rec.ink = k;
+      if (r && r.length) rec.runs = r;
+      data.notes[kidId][key] = rec;                    // keeps a chosen look
+    } else {
+      delete data.notes[kidId][key];
+    }
+    save();
+  }
+
+  function renderNotes() {
+    if (!notesArea) return;
+    var kid = typeof shownKid === "function" ? shownKid() : null;
+    if (!kid || typeof week === "undefined" || !shownMonday) { notesArea.textContent = ""; notesShownFor = ""; return; }
+
+    var hasDay = dayShown();
+    var openKey = hasDay ? selectedKey : "";
+    var id = kid.id + "|" + openKey + "|" + ymd(shownMonday);
+    var box = notesArea.querySelector(".st-edit");
+    // typing in a note: leave the board alone
+    if (box && document.activeElement === box && notesShownFor === id) return;
+    notesShownFor = id;
+    notesArea.textContent = "";
+
+    var board = document.createElement("div");
+    board.className = "notes-board";
+
+    var top = document.createElement("div");
+    top.className = "nb-top";
+    var title = document.createElement("span");
+    title.className = "nb-title";
+    title.textContent = "📝 Notes";
+    var sub = document.createElement("span");
+    sub.className = "nb-sub";
+    // paper colour for the note that is open, right next to the title
+    var left = document.createElement("div");
+    left.className = "nb-left";
+    left.appendChild(title);
+    if (hasDay && openKey === ymd(new Date())) {
+      var openColor = noteColor(noteFor(kid.id, openKey), openKey);
+      var picks = document.createElement("div");
+      picks.className = "nb-colors";
+      picks.setAttribute("role", "group");
+      picks.setAttribute("aria-label", "Note colour");
+      NOTE_COLORS.forEach(function (c) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "n-" + c + (c === openColor ? " on" : "");
+        b.title = c.charAt(0).toUpperCase() + c.slice(1);
+        b.setAttribute("aria-label", "Note colour " + c);
+        b.addEventListener("mousedown", function (e) { e.preventDefault(); });   // keep typing
+        b.addEventListener("click", function () {
+          saveNote(kid.id, openKey, noteFor(kid.id, openKey).text, c);
+          var st = notesArea.querySelector(".sticky.open");
+          if (st) NOTE_COLORS.forEach(function (x) { st.classList.toggle("n-" + x, x === c); });
+          Array.prototype.forEach.call(picks.children, function (x) { x.classList.toggle("on", x === b); });
+        });
+        picks.appendChild(b);
+      });
+      left.appendChild(picks);
+
+      var openFont = noteFont(noteFor(kid.id, openKey));
+      var fonts = document.createElement("div");
+      fonts.className = "nb-fonts";
+      fonts.setAttribute("role", "group");
+      fonts.setAttribute("aria-label", "Writing style");
+      NOTE_FONTS.forEach(function (f) {
+        var b = document.createElement("button");
+        b.type = "button";
+        // one choice lit at a time: a style, or strike-through
+        b.className = "f-" + f[0] + (f[0] === openFont && !noteFor(kid.id, openKey).strike ? " on" : "");
+        b.textContent = "Aa";
+        b.title = f[1];
+        b.setAttribute("aria-label", "Writing style " + f[1]);
+        b.addEventListener("mousedown", function (e) { e.preventDefault(); });   // keep typing
+        b.addEventListener("click", function () {
+          var ed = notesArea.querySelector(".st-edit");
+          // highlighted text: restyle just that
+          if (ed && selectedIn(ed)) { restyleSelection(ed, { font: f[0] }); return; }
+          var penNow = noteFor(kid.id, openKey).ink;
+          // otherwise what is already written keeps its style; only what comes next changes
+          saveNote(kid.id, openKey, noteFor(kid.id, openKey).text, undefined, f[0], undefined, false);
+          if (ed) startStyle(ed, f[0], false, penNow);
+          Array.prototype.forEach.call(fonts.children, function (x) { x.classList.toggle("on", x === b); });
+        });
+        fonts.appendChild(b);
+      });
+
+      // strike through: on or off for what is typed next
+      var strikeBtn = document.createElement("button");
+      strikeBtn.type = "button";
+      strikeBtn.className = "st-strike-btn" + (noteFor(kid.id, openKey).strike ? " on" : "");
+      strikeBtn.innerHTML = "<s>S</s>";
+      strikeBtn.title = "Strike through";
+      strikeBtn.setAttribute("aria-label", "Strike through");
+      strikeBtn.setAttribute("aria-pressed", noteFor(kid.id, openKey).strike ? "true" : "false");
+      strikeBtn.addEventListener("mousedown", function (e) { e.preventDefault(); });   // keep typing
+      strikeBtn.addEventListener("click", function () {
+        var sel = notesArea.querySelector(".st-edit");
+        if (sel && selectedIn(sel)) { restyleSelection(sel, { strike: "toggle" }); return; }
+        var cur = noteFor(kid.id, openKey);
+        var on = !cur.strike;
+        saveNote(kid.id, openKey, cur.text, undefined, undefined, undefined, on);
+        var ed = notesArea.querySelector(".st-edit");
+        if (ed) startStyle(ed, noteFont(cur), on, cur.ink);
+        var curFont = noteFont(cur);
+        Array.prototype.forEach.call(fonts.children, function (x) {
+          x.classList.toggle("on", on ? x === strikeBtn : x.classList.contains("f-" + curFont));
+        });
+        strikeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      fonts.appendChild(strikeBtn);
+      left.appendChild(fonts);
+
+      // pen colour: its own small group, one lit at a time
+      var pens = document.createElement("div");
+      pens.className = "nb-pens";
+      pens.setAttribute("role", "group");
+      pens.setAttribute("aria-label", "Pen colour");
+      var penOn = inkOf(noteFor(kid.id, openKey).ink);
+      NOTE_INKS.forEach(function (p) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "pen-" + p[0] + (p[0] === penOn ? " on" : "");
+        // a little pen: coloured body, cap band and a dark tip
+        b.innerHTML = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\">" +
+          "<path d=\"M15.2 3.4a2 2 0 0 1 2.8 0l2.6 2.6a2 2 0 0 1 0 2.8L9.2 20.2 3.6 21.4l1.2-5.6z\" fill=\"currentColor\"/>" +
+          "<path d=\"M13.4 5.2l5.4 5.4\" stroke=\"rgba(255,255,255,.55)\" stroke-width=\"1.4\"/>" +
+          "<path d=\"M4.8 15.8l3.4 3.4-4.6 2.2z\" fill=\"#2a2a2a\" opacity=\".75\"/></svg>";
+        b.title = p[1] + " pen";
+        b.setAttribute("aria-label", p[1] + " pen");
+        b.addEventListener("mousedown", function (e) { e.preventDefault(); });   // keep typing
+        b.addEventListener("click", function () {
+          Array.prototype.forEach.call(pens.children, function (x) { x.classList.toggle("on", x === b); });
+          var ed = notesArea.querySelector(".st-edit");
+          if (ed && selectedIn(ed)) { restyleSelection(ed, { ink: p[0] }); return; }
+          var cur = noteFor(kid.id, openKey);
+          saveNote(kid.id, openKey, cur.text, undefined, undefined, undefined, undefined, p[0]);
+          if (ed) startStyle(ed, noteFont(cur), cur.strike, p[0]);
+        });
+        pens.appendChild(b);
+      });
+      left.appendChild(pens);
+    }
+    top.appendChild(left);
+    top.appendChild(sub);
+    board.appendChild(top);
+
+    var wall = document.createElement("div");
+    wall.className = "stickies";
+    var count = 0;
+
+    for (var i = 0; i < 7; i++) {
+      var key = ymd(addDays(shownMonday, i));
+      var n = noteFor(kid.id, key);
+      var isOpen = key === openKey;
+      // this week: a note for every day so far, empty or not (never days to come);
+      // earlier weeks: only the days that have something written
+      var showDay = isCurrentWeek() ? !isFuture(key) : !!n.text;
+      if (!showDay && !isOpen) continue;
+      if (n.text) count++;
+      wall.appendChild(sticky(kid, key, i, n, isOpen));
+    }
+
+    sub.textContent = count ? plural(count, "note") + " this week" : "";
+    if (!wall.children.length) {
+      var empty = document.createElement("div");
+      empty.className = "st-empty";
+      empty.textContent = isCurrentWeek() ? "No notes yet" : "🍃 A quiet week…";
+      wall.appendChild(empty);
+    }
+    board.appendChild(wall);
+    notesArea.appendChild(board);
+  }
+
+  function sticky(kid, key, dayIndex, n, isOpen) {
+    // only today's note can be written; earlier days are kept as they were
+    var isToday = key === ymd(new Date());
+    var canWrite = isOpen && isToday;
+    var color = noteColor(n, key);
+
+    var el = document.createElement("div");
+    el.className = "sticky n-" + color + " f-" + noteFont(n) + (isOpen ? " open" : "") + (isToday ? "" : " past");
+
+    var tag = document.createElement("span");
+    tag.className = "st-day";
+    var d = document.createElement("span");
+    d.textContent = DAY_NAMES[dayIndex].toUpperCase() + " " + fromYmd(key).getDate();
+    tag.appendChild(d);
+    var t = document.createElement("span");
+    t.textContent = isToday ? "TODAY" : "🔒";
+    if (!isToday) t.title = "Earlier days are locked";
+    tag.appendChild(t);
+    el.appendChild(tag);
+
+    if (canWrite) {
+      var ed = document.createElement("div");
+      ed.className = "st-edit f-" + noteFont(n) + (n.strike ? " st-strike" : "") + " ink-" + inkOf(n.ink);
+      ed.setAttribute("data-c", inkOf(n.ink));         // typing straight into the note uses the chosen style
+      ed.contentEditable = "true";
+      ed.setAttribute("role", "textbox");
+      ed.setAttribute("aria-multiline", "true");
+      ed.setAttribute("aria-label", "Note for " + longDate(fromYmd(key)));
+      ed.setAttribute("data-placeholder", "Pen's ready for today…");
+      noteRuns(n).forEach(function (r) { ed.appendChild(runSpan(r)); });
+      markEmpty(ed);
+
+      ed.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); insertPlain(ed, "\n"); }
+      });
+      ed.addEventListener("beforeinput", function (e) {
+        var adds = e.inputType && e.inputType.indexOf("insert") === 0;
+        if (adds && editorText(ed).length >= 500) e.preventDefault();
+      });
+      ed.addEventListener("paste", function (e) {
+        e.preventDefault();
+        var text = (e.clipboardData || window.clipboardData).getData("text") || "";
+        insertPlain(ed, text.slice(0, Math.max(0, 500 - editorText(ed).length)));
+      });
+      ed.addEventListener("input", function () {
+        var runs = editorRuns(ed);
+        var text = runs.map(function (r) { return r[0]; }).join("");
+        saveNote(kid.id, key, text, undefined, undefined, runs);
+        markEmpty(ed);
+        var subEl = notesArea.querySelector(".nb-sub");
+        if (subEl) {
+          var c = 0;
+          for (var j = 0; j < 7; j++) if (noteFor(kid.id, ymd(addDays(shownMonday, j))).text) c++;
+          subEl.textContent = c ? plural(c, "note") + " this week" : "";
+        }
+      });
+      el.appendChild(ed);
+
+    } else {
+      var txt = document.createElement("div");
+      var runs = noteRuns(n);
+      txt.className = "st-text" + (runs.length ? "" : " empty");
+      if (runs.length) runs.forEach(function (r) { txt.appendChild(runSpan(r)); });
+      else txt.textContent = key === ymd(new Date()) ? "Pen's ready for today…" : "A quiet day…";
+      el.appendChild(txt);
+      if (!isOpen) {
+        // tapping another day's note opens that day, here and in the chart
+        el.setAttribute("role", "button");
+        el.tabIndex = 0;
+        el.title = "Open " + longDate(fromYmd(key));
+        el.addEventListener("click", pickDay(key));
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickDay(key)(); }
+        });
+      }
+    }
+    return el;
+  }
+
+  /* ---------- rich note editing: each piece of text keeps its own style ---------- */
+
+  // pen colours; "ink" is the plain dark pen every note starts with
+  var NOTE_INKS = [["ink", "Black"], ["blue", "Blue"], ["red", "Red"], ["green", "Green"]];
+  function inkOf(c) { return NOTE_INKS.some(function (x) { return x[0] === c; }) ? c : "ink"; }
+
+  var ZW = "\u200B";                    // an invisible spot to type into a fresh style
+
+  function runSpan(r) {
+    var s = document.createElement("span");
+    var f = NOTE_FONTS.some(function (x) { return x[0] === r[1]; }) ? r[1] : "hand";
+    var c = inkOf(r[3]);
+    s.className = "f-" + f + (r[2] ? " st-strike" : "") + " ink-" + c;
+    s.setAttribute("data-f", f);
+    s.setAttribute("data-s", r[2] ? "1" : "0");
+    s.setAttribute("data-c", c);
+    s.textContent = r[0];
+    return s;
+  }
+
+  // Walk the note and read it back as pieces of [text, style].
+  function editorRuns(ed) {
+    var base = (ed.className.match(/f-(\w+)/) || [])[1] || "hand";
+    var baseStrike = ed.classList.contains("st-strike");
+    var baseInk = inkOf(ed.getAttribute("data-c"));
+    var out = [];
+    var walker = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while ((node = walker.nextNode())) {
+      var t = node.nodeValue.split(ZW).join("");
+      if (!t) continue;
+      var holder = node.parentNode && node.parentNode.closest ? node.parentNode.closest("[data-f]") : null;
+      var inside = holder && ed.contains(holder);
+      var f = inside ? holder.getAttribute("data-f") : base;
+      var st = inside ? holder.getAttribute("data-s") === "1" : baseStrike;
+      var c = inside ? inkOf(holder.getAttribute("data-c")) : baseInk;
+      var last = out[out.length - 1];
+      if (last && last[1] === f && !!last[2] === st && inkOf(last[3]) === c) last[0] += t;
+      else out.push(runOf(t, f, st, c));
+    }
+    return out;
+  }
+
+  function runOf(t, f, st, c) {
+    var r = [t, f];
+    if (st || c !== "ink") r.push(st ? 1 : 0);
+    if (c !== "ink") r.push(c);
+    return r;
+  }
+
+  function editorText(ed) {
+    return editorRuns(ed).map(function (r) { return r[0]; }).join("");
+  }
+
+  function markEmpty(ed) {
+    ed.classList.toggle("is-empty", !editorText(ed));
+  }
+
+  // Put the caret inside the note (at the end if it is somewhere else).
+  function caretIn(ed) {
+    var sel = window.getSelection();
+    if (sel.rangeCount && ed.contains(sel.getRangeAt(0).startContainer)) return sel.getRangeAt(0);
+    ed.focus();
+    var r = document.createRange();
+    r.selectNodeContents(ed);
+    r.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    return r;
+  }
+
+  // A new style starts right where the caret is: an empty piece to type into.
+  function startStyle(ed, font, strike, ink) {
+    ink = inkOf(ink);
+    if (!editorText(ed)) {                // nothing written yet: the whole note simply takes the style
+      ed.textContent = "";
+      NOTE_FONTS.forEach(function (x) { ed.classList.toggle("f-" + x[0], x[0] === font); });
+      ed.classList.toggle("st-strike", !!strike);
+      NOTE_INKS.forEach(function (x) { ed.classList.toggle("ink-" + x[0], x[0] === ink); });
+      ed.setAttribute("data-c", ink);
+      markEmpty(ed);
+      ed.focus();
+      return;
+    }
+    var range = caretIn(ed);
+    range.deleteContents();
+    var s = runSpan(["", font, strike ? 1 : 0, ink]);
+    s.textContent = ZW;
+
+    // If the caret sits inside another styled piece, split that piece so the new
+    // one sits beside it rather than inside it (a line-through would leak in).
+    var holder = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentNode;
+    holder = holder && holder.closest ? holder.closest("[data-f]") : null;
+    if (holder && ed.contains(holder) && holder !== ed) {
+      var tail = document.createRange();
+      tail.setStart(range.startContainer, range.startOffset);
+      tail.setEndAfter(holder.lastChild || holder);
+      var rest = tail.extractContents();
+      var after = holder.cloneNode(false);
+      after.appendChild(rest);
+      holder.parentNode.insertBefore(s, holder.nextSibling);
+      if (after.textContent.split(ZW).join("")) s.parentNode.insertBefore(after, s.nextSibling);
+    } else {
+      range.insertNode(s);
+    }
+    var r = document.createRange();
+    r.setStart(s.firstChild, 1);
+    r.collapse(true);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    ed.focus();
+  }
+
+  // Is some text highlighted inside the note?
+  function selectedIn(ed) {
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return false;
+    var r = sel.getRangeAt(0);
+    return !r.collapsed && ed.contains(r.commonAncestorContainer);
+  }
+
+  // Change the style of the highlighted text only, keeping the words.
+  // change: { font: "marker" }, { strike: "toggle" } or { ink: "blue" }
+  function restyleSelection(ed, change) {
+    var sel = window.getSelection();
+    var range = sel.getRangeAt(0);
+    var base = (ed.className.match(/f-(\w+)/) || [])[1] || "hand";
+    var baseStrike = ed.classList.contains("st-strike");
+    var baseInk = inkOf(ed.getAttribute("data-c"));
+
+    // read the highlighted pieces with the style each one has now
+    function styleOf(node) {
+      var el = node.nodeType === 1 ? node : node.parentNode;
+      var holder = el && el.closest ? el.closest("[data-f]") : null;
+      return holder && ed.contains(holder)
+        ? [holder.getAttribute("data-f"), holder.getAttribute("data-s") === "1", inkOf(holder.getAttribute("data-c"))]
+        : [base, baseStrike, baseInk];
+    }
+    var startStyleNow = styleOf(range.startContainer);
+    var oneNode = range.startContainer === range.endContainer;
+    var frag = range.cloneContents();
+    var pieces = [];
+    var walker = document.createTreeWalker(frag, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while ((node = walker.nextNode())) {
+      var t = node.nodeValue.split(ZW).join("");
+      if (!t) continue;
+      var holder = node.parentNode && node.parentNode.closest ? node.parentNode.closest("[data-f]") : null;
+      // a piece cut out of the middle of a styled span keeps that span's style
+      // (a highlight inside one stretch of text comes back without its span, so it
+      // borrows the style around it; loose text elsewhere is the note's own style)
+      var st = holder ? [holder.getAttribute("data-f"), holder.getAttribute("data-s") === "1", inkOf(holder.getAttribute("data-c"))]
+        : (oneNode ? startStyleNow : [base, baseStrike, baseInk]);
+      pieces.push([t, st[0], st[1], st[2]]);
+    }
+    if (!pieces.length) return;
+
+    var strikeTo = null;
+    if (change.strike === "toggle") strikeTo = !pieces.every(function (p) { return p[2]; });
+
+    range.deleteContents();
+
+    // split a styled piece the cut landed inside, so the new pieces sit beside it
+    var at = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentNode;
+    var outer = at && at.closest ? at.closest("[data-f]") : null;
+    var marker = document.createTextNode("");
+    if (outer && ed.contains(outer) && outer !== ed) {
+      var tail = document.createRange();
+      tail.setStart(range.startContainer, range.startOffset);
+      tail.setEndAfter(outer.lastChild || outer);
+      var rest = tail.extractContents();
+      var after = outer.cloneNode(false);
+      after.appendChild(rest);
+      outer.parentNode.insertBefore(marker, outer.nextSibling);
+      if (after.textContent.split(ZW).join("")) marker.parentNode.insertBefore(after, marker.nextSibling);
+    } else {
+      range.insertNode(marker);
+    }
+
+    var first = null, last = null;
+    pieces.forEach(function (p) {
+      var f = change.font || p[1];
+      // picking a writing style replaces strike-through; the two are never combined by a pick
+      var s = change.font ? false : (strikeTo === null ? p[2] : strikeTo);
+      var span = runSpan([p[0], f, s ? 1 : 0, change.ink || p[3]]);
+      marker.parentNode.insertBefore(span, marker);
+      if (!first) first = span;
+      last = span;
+    });
+    marker.parentNode.removeChild(marker);
+
+    // keep the same words highlighted so another style can be tried
+    var nr = document.createRange();
+    nr.setStartBefore(first);
+    nr.setEndAfter(last);
+    sel.removeAllRanges();
+    sel.addRange(nr);
+    ed.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function insertPlain(ed, text) {
+    if (!text) return;
+    var range = caretIn(ed);
+    range.deleteContents();
+    var node = document.createTextNode(text);
+    range.insertNode(node);
+    var r = document.createRange();
+    r.setStartAfter(node);
+    r.collapse(true);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    ed.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   function renderWho() {
     askArea.textContent = "";
     asking = false;                 // only one question is ever on screen
     KINDS.forEach(renderPicker);
+    renderNotes();
   }
 
 
@@ -1882,6 +2547,7 @@
     week.title.textContent = kid ? kid.name + " — " + when.charAt(0).toLowerCase() + when.slice(1) : when;
     week.range.textContent = rangeLabel(shownMonday);
     week.current.classList.toggle("off", isCurrentWeek());
+    document.getElementById("weekBar").classList.toggle("no-kid", !kid);
 
     // dropdown of earlier weeks, or a short message when there are none
     var earlier = earlierMondays();
@@ -1984,6 +2650,7 @@
 
     renderWeekTotals(tallies, !!kid);
     renderDay();
+    renderNotes();
   }
 
   // What the whole week adds up to, kept as two separate figures. A day the red
@@ -3628,6 +4295,7 @@
       if (!data.startedOn) data.startedOn = ymd(new Date());
       if (!data.cleared) data.cleared = {};
       if (!data.tests) data.tests = {};
+      if (!data.notes) data.notes = {};
 
       KINDS.forEach(function (kind) { setActive(kind, null); });   // ask again
       save();
