@@ -601,6 +601,30 @@
 
   .day-panel { padding: 18px 18px 22px; }
   .day-panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .catch-up {
+    border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent);
+    border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    white-space: nowrap;
+  }
+  .catch-up:hover { background: var(--accent); color: #fff; }
+  .catch-up.done { background: var(--good); border-color: var(--good); color: #fff; }
+  .catch-up[hidden] { display: none; }
+  .day-catch {
+    position: absolute; left: 6px; right: 6px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    border: 1px dashed var(--accent); background: var(--accent-soft); color: var(--accent);
+    border-radius: 10px; padding: 8px 4px; cursor: pointer; font-family: inherit; line-height: 1.2;
+  }
+  .day-catch span { font-size: 16px; }
+  .day-catch b { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .day-catch em { font-style: normal; font-size: 12.5px; font-weight: 800; }
+  .day-catch:hover { background: var(--accent); color: #fff; border-style: solid; }
+  .day-catch:hover b { color: #fff; }
+  @media (max-width: 700px) {
+    .day-catch { left: 2px; right: 2px; padding: 6px 2px; }
+    .day-catch b { display: none; }
+    .day-catch em { font-size: 10px; }
+  }
   .day-panel-head h3 {
     margin: 0; font-family: var(--font-title); font-weight: 600; font-size: 18px;
   }
@@ -1139,6 +1163,7 @@
       <div class="day-panel-head">
         <h3 id="dayHeading"></h3>
         <span class="day-total" id="dayTotal"></span>
+        <button class="catch-up" id="catchUpBtn" type="button" hidden>✏️ Missed a day? Catch up</button>
         <button class="titles-btn" id="titlesBtn" type="button" aria-expanded="false">Titles ▾</button>
       </div>
 
@@ -1829,8 +1854,19 @@
     }
   }
 
+  function catchUpDay(key) {
+    return function (e) {
+      e.stopPropagation();
+      selectedKey = key; dayChosen = true; catchUpKey = key;
+      renderWeek();
+    };
+  }
+
   function pickDay(key) {
-    return function () { selectedKey = key; dayChosen = true; renderWeek(); };
+    return function () {
+      if (key !== selectedKey) catchUpKey = null;   // opening another day locks the last one again
+      selectedKey = key; dayChosen = true; renderWeek();
+    };
   }
 
   function renderWeek() {
@@ -1914,6 +1950,18 @@
         vv.textContent = "🚩 0";
         val.appendChild(vv);
         track.appendChild(val);
+      }
+
+      // a past day of this week with nothing in it gets its catch-up message
+      // right in its empty column
+      if (dayMissed(key) && catchUpKey !== key) {
+        var cu = document.createElement("button");
+        cu.type = "button";
+        cu.className = "day-catch";
+        cu.innerHTML = "<span>✏️</span><b>Missed a day?</b><em>Catch up</em>";
+        cu.setAttribute("aria-label", "Missed a day? Catch up " + DAY_NAMES[j]);
+        cu.addEventListener("click", catchUpDay(key));
+        track.appendChild(cu);
       }
 
       var name = document.createElement("span");
@@ -2550,6 +2598,7 @@
     panel: document.getElementById("dayPanel"),
     hint: document.getElementById("pickHint"),
     heading: document.getElementById("dayHeading"),
+    catchUp: document.getElementById("catchUpBtn"),
     total: document.getElementById("dayTotal"),
     btn: document.getElementById("titlesBtn"),
     menu: document.getElementById("titlesMenu"),
@@ -2626,8 +2675,13 @@
     var d = fromYmd(selectedKey);
     var isToday = selectedKey === ymd(new Date());
 
-    day.heading.textContent = (isToday ? "Today · " : "") + longDate(d) +
-      (isToday ? "" : "  🔒");
+    var catching = !isToday && selectedKey === catchUpKey;
+    day.heading.textContent = (isToday ? "Today · " : catching ? "Catching up · " : "") + longDate(d) +
+      (isToday || catching ? "" : "  🔒");
+
+    day.catchUp.hidden = !catching;
+    day.catchUp.classList.add("done");
+    day.catchUp.textContent = "✓ Done";
 
     day.panel.classList.toggle("locked", !marksEditable());
 
@@ -2914,7 +2968,15 @@
   }
 
   // Only today can be changed. What a past day holds is a record of that day.
-  function editable() { return selectedKey === ymd(new Date()); }
+  function editable() { return selectedKey === ymd(new Date()) || selectedKey === catchUpKey; }
+
+  // A past day of this week that was never filled in can be opened to catch up.
+  var catchUpKey = null;
+  function dayMissed(key) {
+    var kid = shownKid();
+    if (!kid || !isCurrentWeek() || isFuture(key) || key === ymd(new Date())) return false;
+    return !dayTally(fromYmd(key)).marked && !strikesOn(kid.id, key);
+  }
 
   // A day that counts as zero keeps its titles locked until the flags are cleared.
   function dayZeroed() {
@@ -3380,6 +3442,11 @@
     renderWeek();
   });
 
+  day.catchUp.addEventListener("click", function () {
+    catchUpKey = catchUpKey === selectedKey ? null : selectedKey;
+    renderWeek();
+  });
+
   day.btn.addEventListener("click", function () {
     menuOpen = !menuOpen;
     renderDay();
@@ -3447,12 +3514,14 @@
   week.picker.addEventListener("change", function () {
     if (!week.picker.value) return;
     shownMonday = fromYmd(week.picker.value);
+    catchUpKey = null;
     dayChosen = false;
     renderWeek();
   });
 
   week.current.addEventListener("click", function () {
     shownMonday = thisMonday;
+    catchUpKey = null;
     selectedKey = ymd(new Date());
     dayChosen = false;
     renderWeek();
