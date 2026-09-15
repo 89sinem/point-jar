@@ -584,9 +584,13 @@
     .chart { --plot-h: 140px; --plot-pad: 18px; column-gap: 6px; }
     .days { gap: 2px; }
     .track { gap: 0; }
-    .bar { width: 8px; }
-    /* three figures do not fit side by side on a phone; tap a day for them */
-    .bar::after { content: none; }
+    .chart { --plot-pad: 30px; }
+    .bar { width: 11px; }
+    /* small figures on a phone; neighbours are lifted to alternate heights so
+       two numbers side by side never sit on top of each other */
+    .bar::after { font-size: 8.5px; letter-spacing: -.04em; transform: translate(-50%, -3px); }
+    .bar + .bar::after { transform: translate(-50%, -13px); }
+    .bar + .bar + .bar::after { transform: translate(-50%, -3px); }
     .axis span { font-size: 9.5px; }
     .day-name { font-size: 9.5px; letter-spacing: .03em; }
     .day-date { font-size: 10.5px; }

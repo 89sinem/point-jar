@@ -1,7 +1,7 @@
 /* Keeps Point Jar working with no internet at all.
    Bump CACHE when the app changes so phones pick the new version up. */
 
-var CACHE = "point-jar-v14";
+var CACHE = "point-jar-v15";
 
 var FILES = [
   "./",
