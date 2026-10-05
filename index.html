@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Point Jar</title>
 
 <!-- installed-app bits: home-screen icon, full screen, no internet needed -->
@@ -317,12 +317,50 @@
 
   .notes-area:empty { display: none; }
   .week-bar { padding: 16px 18px; }
-  .week-bar .week-head { margin-bottom: 0; }
+  .week-bar .week-head { margin-bottom: 0; flex-wrap: wrap; }
   /* kid chosen: week controls on the left, the kid and the week on the right */
-  .week-bar .week-when { order: 3; text-align: right; }
+  .week-bar .week-when { order: 4; flex: 0 1 auto; text-align: right; }
   .week-bar .wk-picker { order: 1; opacity: .6; transition: opacity .15s ease; }
   .week-bar .wk-picker:hover, .week-bar .wk-picker:focus-within { opacity: 1; }
   .week-bar .wk-btn { order: 2; }
+  /* in the middle, between the week controls and the title */
+  .week-bar .view-tabs { order: 3; flex: 1 1 auto; justify-content: center; margin-top: 0; }
+  /* Week · Month · School quarter · Year */
+  .view-tabs { display: flex; justify-content: flex-end; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
+  .view-tabs[hidden] { display: none; }
+  .view-tabs button {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); border-radius: 999px;
+    padding: 5px 12px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .view-tabs button:hover { border-color: var(--accent); color: var(--accent); }
+  .view-tabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* a month, quarter or year: totals and its weeks, no day chart */
+  .period[hidden] { display: none; }
+  .period .rw-pm { margin-top: 0; }
+  /* shown instead of the totals while a period does not have enough data yet */
+  .pd-note {
+    display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border-radius: 12px;
+    background: var(--panel-2); border: 1px dashed var(--line);
+  }
+  .pd-note[hidden], #periodBody[hidden] { display: none; }
+  .pd-note-icon { font-size: 22px; line-height: 1.2; }
+  .pd-note strong { display: block; font-size: 15px; margin-bottom: 3px; }
+  .pd-note span { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+  .pd-title { margin: 18px 0 8px; font-size: 11.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .pd-weeks { display: grid; gap: 6px; }
+  .pd-week {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; text-align: left;
+    border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 13.5px; color: var(--text);
+  }
+  .pd-week:hover { border-color: var(--accent); }
+  .pd-week .when { flex: 1; font-weight: 700; }
+  .pd-week .up { color: var(--good); font-weight: 800; }
+  .pd-week .down { color: var(--danger); font-weight: 800; }
+  .pd-week .ex { color: var(--extra); font-weight: 800; }
+  .pd-week .none { color: var(--muted); }
+  body.period-view #notesArea, body.period-view #redline, body.period-view #dayPanel,
+  body.period-view #pickHint, body.period-view #weekCard .chart, body.period-view #reward { display: none !important; }
   .week-bar .wk-btn.off { display: none; }
   /* nobody chosen yet: just the week, in the middle */
   .week-bar.no-kid .week-when { text-align: center; }
@@ -363,10 +401,12 @@
   .nb-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
   .nb-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .nb-sub { font-size: 12px; font-weight: 600; color: var(--muted); }
-  .stickies { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px 16px; }
+  /* the whole week in one row; the open note takes two places so there is room to write */
+  .stickies { display: grid; grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr)); gap: 16px 10px; align-items: start; }
+  .sticky.open { grid-column: span 2; }
 
   .sticky {
-    position: relative; min-height: 132px; padding: 24px 12px 10px; border-radius: 2px;
+    position: relative; min-height: 104px; padding: 22px 9px 8px; border-radius: 2px;
     background: var(--n-yellow); color: var(--sticky-ink); box-shadow: var(--sticky-shadow);
     font-family: "Caveat", "Segoe Print", "Bradley Hand", cursive; font-size: 21px; line-height: 1.12;
     transition: transform .15s ease, box-shadow .15s ease; cursor: pointer; text-align: left;
@@ -375,8 +415,19 @@
   .sticky:nth-child(4n+2) { transform: rotate(1.4deg); }
   .sticky:nth-child(4n+3) { transform: rotate(-.8deg); }
   .sticky:nth-child(4n)   { transform: rotate(2deg); }
-  .sticky:hover { transform: rotate(0) translateY(-2px); }
   .sticky.open { transform: rotate(0); cursor: default; box-shadow: var(--sticky-shadow), 0 0 0 2px var(--accent); }
+  /* lifts on pointing only where there is a real mouse; on a phone a tap would leave it stuck */
+  @media (hover: hover) {
+  .sticky:hover { transform: rotate(0) translateY(-2px); }
+  /* an open note lifts off the board when pointed at, empty or written, any day */
+  .sticky:not(.past):hover { box-shadow: 0 12px 22px rgba(74,63,44,.24); }
+  .sticky.open:hover {
+    transform: rotate(0) translateY(-4px) scale(1.02);
+    box-shadow: 0 14px 26px rgba(74,63,44,.26), 0 0 0 2px var(--accent);
+  }
+  :root[data-theme="dark"] .sticky:not(.past):hover { box-shadow: 0 12px 24px rgba(0,0,0,.55); }
+  :root[data-theme="dark"] .sticky.open:hover { box-shadow: 0 14px 28px rgba(0,0,0,.6), 0 0 0 2px var(--accent); }
+  }
   .sticky::after {                                    /* a strip of tape */
     content: ""; position: absolute; top: -8px; left: 50%; width: 48px; height: 16px;
     transform: translateX(-50%) rotate(-3deg); background: rgba(255,255,255,.5);
@@ -387,6 +438,14 @@
     font-family: var(--font-body); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: rgba(0,0,0,.5);
   }
   .sticky .st-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* a closed note is a smaller preview: a few lines, then "…" and Read more */
+  .sticky:not(.open) .st-text {
+    zoom: .78; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden;
+  }
+  .sticky .st-more {
+    display: block; margin-top: 4px; font-family: var(--font-body); font-size: 11px; font-weight: 800;
+    color: rgba(0,0,0,.55); text-decoration: underline; text-underline-offset: 2px;
+  }
 
   /* writing styles: the same classes dress the note and its "Aa" button */
   .f-hand   { font-family: "Caveat", "Segoe Print", "Bradley Hand", cursive; }
@@ -428,10 +487,14 @@
 
   .nb-fonts button.f-marker { font-size: 12px; } .nb-fonts button.f-type { font-size: 13px; } .nb-fonts button.f-plain { font-size: 13px; }
   /* earlier days: smaller and faded; pointing at one (or opening it) brings it up to read */
-  .sticky.past { opacity: .6; filter: saturate(.7); scale: .78; transform-origin: center top;
+  .sticky.past { opacity: .6; filter: saturate(.7); transform-origin: center top;
     transition: scale .18s ease, opacity .18s ease, filter .18s ease, transform .18s ease; }
-  .sticky.past:hover, .sticky.past:focus-visible, .sticky.past.open {
-    scale: 1.08; opacity: 1; filter: none; z-index: 3; position: relative; }
+  .sticky.past:focus-visible, .sticky.past.open {
+    scale: 1.05; opacity: 1; filter: none; z-index: 3; position: relative; }
+  @media (hover: hover) {
+    .sticky.past:hover { scale: 1.05; opacity: 1; filter: none; z-index: 3; position: relative; }
+  }
+  .sticky.past.open { scale: 1; }
   .sticky .st-text.empty { opacity: .45; }
   .st-edit {
     min-height: 78px; outline: none; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere;
@@ -451,8 +514,9 @@
   .n-purple { background: var(--n-purple); } .n-orange { background: var(--n-orange); }
 
   @media (max-width: 700px) {
-    .stickies { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
-    .sticky { min-height: 118px; font-size: 19px; }
+    .stickies { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+    .sticky { min-height: 96px; font-size: 19px; }
+    .sticky.open { grid-column: 1 / -1; }
   }
 
   .ask-area .ask-q { font-family: var(--font-title); font-weight: 600; font-size: 18px; }
@@ -589,18 +653,33 @@
     background-repeat: no-repeat;
     transition: width .25s ease;
   }
-  .rw-goal {
+  .rw-goal, .rw-step {
     position: absolute; left: 100%; top: 50%; margin-left: -13px; transform: translateY(-50%);
+    padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit;
     font-size: 24px; line-height: 1; filter: grayscale(1); opacity: .5;
     transition: filter .2s ease, opacity .2s ease, transform .2s ease;
   }
-  /* quarter marks along the bar, so progress reads as steps */
-  .rw-tick {
-    position: absolute; top: 2px; bottom: 2px; width: 2px; margin-left: -1px;
-    background: var(--muted); opacity: .35; border-radius: 1px; pointer-events: none;
+  /* the smaller gifts at each quarter of the way */
+  .rw-step { margin-left: 0; transform: translate(-50%, -50%); font-size: 17px; }
+  .rw-step.lit { filter: none; opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  .rw-goal:hover, .rw-step:hover { opacity: .85; }
+  /* what each gift earns, written right above it; faded until something is typed */
+  .rw-names { position: relative; height: 24px; margin-bottom: 6px; }
+  .rw-names input {
+    position: absolute; bottom: 0; transform: translateX(-50%); width: 23%; box-sizing: border-box;
+    padding: 3px 6px; border: 1px dashed transparent; border-radius: 7px; background: transparent;
+    font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--accent); text-align: center;
+    text-overflow: ellipsis;
   }
-  .rw-tick.hit { background: var(--panel); opacity: .9; }
-  .rw-marks { position: relative; height: 16px; margin-top: 4px; }
+  .rw-names input.end { right: 0; transform: none; text-align: right; width: 21%; }
+  .rw-names input::placeholder { color: var(--muted); opacity: .45; font-weight: 600; }
+  .rw-names input:hover:not(:disabled) { border-color: var(--line); }
+  .rw-names input:focus { outline: none; border-style: solid; border-color: var(--accent); background: var(--panel); text-align: left; }
+  .rw-names input.got { color: var(--good); }
+  .rw-names input:disabled { cursor: default; }
+  .rw-names input:disabled::placeholder { opacity: 0; }
+  /* quarter marks along the bar, so progress reads as steps */
+  .rw-marks { position: relative; height: 16px; margin-top: 8px; }
   .rw-marks span {
     position: absolute; transform: translateX(-50%);
     font-size: 11px; font-weight: 600; color: var(--muted); opacity: .6;
@@ -745,6 +824,7 @@
     .week-head { flex-wrap: wrap; justify-content: center; gap: 8px; }
     .week-when { flex: 1 1 100%; order: -1; }
     .week-bar .week-when { order: -1; text-align: center; }
+    .week-bar .view-tabs { flex-basis: 100%; }
   }
 
   /* ---------- the selected day ---------- */
@@ -759,23 +839,6 @@
   .catch-up:hover { background: var(--accent); color: #fff; }
   .catch-up.done { background: var(--good); border-color: var(--good); color: #fff; }
   .catch-up[hidden] { display: none; }
-  .finish-ask {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px;
-    margin: -4px 0 16px; padding: 12px 14px; border-radius: 12px;
-    border: 1px dashed var(--accent); background: var(--accent-soft);
-  }
-  .finish-ask[hidden] { display: none; }
-  .finish-ask .fa-icon { font-size: 22px; }
-  .finish-ask .fa-text { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; line-height: 1.35; }
-  .finish-ask .fa-text strong { font-size: 14px; }
-  .finish-ask .fa-text span { font-size: 13px; color: var(--muted); }
-  .finish-ask .fa-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-  .finish-ask button {
-    border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; font-family: inherit;
-    cursor: pointer; white-space: nowrap;
-  }
-  .finish-ask .fa-yes { border: 1px solid var(--accent); background: var(--accent); color: #fff; }
-  .finish-ask .fa-no { border: 1px solid var(--line, var(--muted)); background: transparent; color: var(--muted); }
   .day-catch {
     position: absolute; left: 6px; right: 6px; top: 50%; transform: translateY(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -1010,8 +1073,29 @@
   /* ---------- extra points: school test results ---------- */
   .extra { padding: 18px 18px 20px; }
   .extra[hidden] { display: none; }
-  .ex-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .ex-head h2 { margin: 0; font-family: var(--font-title); font-weight: 600; font-size: 20px; }
+  /* the header opens and closes the card; closed, only the week's total shows */
+  .ex-head { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+  .ex-toggle {
+    padding: 0; border: 0; background: none; color: var(--text); cursor: pointer;
+    font-family: var(--font-title); font-weight: 600; font-size: 20px; text-align: left;
+  }
+  .ex-toggle:hover { color: var(--accent); }
+  .ex-chev { display: inline-block; font-style: normal; font-size: 14px; color: var(--muted); transition: transform .15s ease; }
+  .ex-toggle[aria-expanded="true"] .ex-chev { transform: rotate(180deg); }
+  /* which week, month, quarter or year the extra points below belong to */
+  .ex-for { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  /* the title (and Done) on the left, the rest pushed to the right */
+  .ex-week { margin-left: auto; }
+  .ex-for:not([hidden]) + .ex-week { margin-left: 0; }
+  .ex-for[hidden] { display: none; }
+  .ex-for > span { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .ex-for select {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 8px; padding: 5px 6px; font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .ex-for select.kind { color: var(--accent); font-weight: 700; }
+  .ex-for select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .ex-body[hidden] { display: none; }
   .ex-week { font-size: 13px; font-weight: 700; color: var(--muted); }
   .ex-week b { color: var(--extra); font-size: 16px; margin-left: 2px; }
   .ex-title { margin: 14px 0 10px; font-size: 11.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
@@ -1029,15 +1113,48 @@
   .ex-table { overflow-x: auto; }
   .ex-grid { display: grid; gap: 10px; min-width: 560px; }
   .ex-row { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 10px; }
+  /* on a phone all three seasons fit across: Score and Extra points sit one above the other */
+  @media (max-width: 560px) {
+    .ex-grid { min-width: 0; gap: 8px; }
+    .ex-row { gap: 6px; }
+    .ex-cell { padding: 7px 7px 8px; }
+    .ex-name { font-size: 12.5px; }
+    .ex-in { flex-direction: column; gap: 5px; }
+    .ex-colhead { font-size: 10.5px; }
+  }
+  /* reward names: narrower on a phone so the last two never run into each other */
+  @media (max-width: 560px) {
+    .rw-names input { width: 20%; font-size: 11px; padding: 3px 2px; }
+    .rw-names input.end { width: 13%; }
+  }
   .ex-colhead { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 2px 6px; border-bottom: 1px solid var(--line); }
   .ex-colhead small { display: block; margin-top: 3px; font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12px; }
 
   .ex-cell { border-left: 3px solid var(--sub); background: var(--sub-soft); border-radius: 4px 10px 10px 4px; padding: 9px 11px 10px; min-width: 0; }
   .ex-cell.none { border-left-color: var(--line); background: transparent; border: 1px dashed var(--line); border-radius: 10px;
     display: grid; place-items: center; color: var(--muted); font-size: 12px; opacity: .7; }
-  .ex-name { font-size: 14px; font-weight: 600; color: var(--text); display: flex; justify-content: space-between; gap: 6px; }
+  .ex-name { font-family: var(--font-title); font-size: 14px; font-weight: 600; color: var(--text); display: flex; justify-content: space-between; gap: 6px; }
   .ex-name button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 0 2px; }
   .ex-name button:hover { color: var(--danger); }
+  /* first tap on ✕ asks; the second removes */
+  .ex-name button.armed {
+    background: var(--danger); color: #fff; border-radius: 999px; padding: 1px 9px;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+  }
+  .ex-name button.armed:hover { color: #fff; }
+  /* after a test is removed, one press brings it back */
+  .ex-undo {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 8px 12px;
+    border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: 13px;
+  }
+  .ex-undo span { flex: 1; min-width: 0; color: var(--muted); }
+  .ex-undo span b { color: var(--text); }
+  .ex-undo button {
+    border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 999px;
+    padding: 4px 12px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .ex-undo button:hover { background: var(--accent); color: #fff; }
+  .ex-undo button.x { border-color: var(--line); background: none; color: var(--muted); padding: 4px 8px; }
   .ex-sub { margin-top: 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--sub); }
   .ex-in { display: flex; gap: 8px; margin-top: 8px; }
   .ex-in label { flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; font-size: 10.5px; font-weight: 700; color: var(--muted); min-width: 0; }
@@ -1050,7 +1167,10 @@
   .ex-in input:disabled { opacity: .7; }
   .ex-in input::-webkit-outer-spin-button, .ex-in input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .ex-in input[type=number] { -moz-appearance: textfield; }
-  .ex-add { display: flex; gap: 8px; margin-top: 12px; max-width: 460px; }
+  /* adding a test on the left, ✓ Done / Make a change on the right */
+  .ex-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .ex-foot .catch-up { margin-left: auto; }
+  .ex-add { display: flex; gap: 8px; flex: 1 1 300px; max-width: 460px; }
   .ex-add[hidden] { display: none; }
   .ex-add input {
     flex: 1 1 auto; min-width: 0; background: var(--panel); color: var(--text);
@@ -1119,6 +1239,7 @@
 
   .day.voided .track { background: color-mix(in srgb, var(--danger) 10%, transparent); }
   .val .v-void { color: var(--danger); }
+  .val.top { top: -22px; transform: none; }
 
   .day-note { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
 
@@ -1254,6 +1375,12 @@
         <span class="week-range" id="weekRange"></span>
       </div>
       <button class="wk-btn off" id="currentWeekBtn" type="button">Current week</button>
+      <div class="view-tabs" id="viewTabs" role="tablist" aria-label="Show a week, month, school quarter or year" hidden>
+        <button type="button" data-view="week" role="tab">Week</button>
+        <button type="button" data-view="month" role="tab">Month</button>
+        <button type="button" data-view="quarter" role="tab">School quarter</button>
+        <button type="button" data-view="year" role="tab">Year</button>
+      </div>
     </div>
   </section>
 
@@ -1272,6 +1399,18 @@
 
     <div class="week-totals" id="weekTotals"></div>
 
+    <div class="period" id="periodView" hidden>
+      <div class="pd-note" id="periodNote" hidden>
+        <span class="pd-note-icon" aria-hidden="true">⏳</span>
+        <div><strong id="periodNoteHead"></strong><span id="periodNoteSub"></span></div>
+      </div>
+      <div id="periodBody">
+        <div class="rw-pm" id="periodPm"></div>
+        <h3 class="pd-title">Week by week</h3>
+        <div class="pd-weeks" id="periodWeeks"></div>
+      </div>
+    </div>
+
     <div class="reward" id="reward" hidden>
       <div class="rw-head">
         <span class="rw-gift">🎁</span>
@@ -1283,10 +1422,18 @@
           <input type="number" id="rewardTarget" min="1" step="1" inputmode="numeric" aria-label="Reward target in points">
         </label>
       </div>
+      <div class="rw-names" id="rewardNames">
+        <input type="text" data-p="25" style="left:25%" maxlength="40" autocomplete="off" placeholder="+ reward" aria-label="Reward at 25%">
+        <input type="text" data-p="50" style="left:50%" maxlength="40" autocomplete="off" placeholder="+ reward" aria-label="Reward at 50%">
+        <input type="text" data-p="75" style="left:75%" maxlength="40" autocomplete="off" placeholder="+ reward" aria-label="Reward at 75%">
+        <input type="text" data-p="100" class="end" maxlength="40" autocomplete="off" placeholder="+ reward" aria-label="Reward at the target">
+      </div>
       <div class="rw-track">
         <div class="rw-fill" id="rewardFill"></div>
-        <i class="rw-tick" style="left:25%"></i><i class="rw-tick" style="left:50%"></i><i class="rw-tick" style="left:75%"></i>
-        <span class="rw-goal" id="rewardGoal">🎁</span>
+        <button class="rw-step" type="button" data-p="25" style="left:25%">🎁</button>
+        <button class="rw-step" type="button" data-p="50" style="left:50%">🎁</button>
+        <button class="rw-step" type="button" data-p="75" style="left:75%">🎁</button>
+        <button class="rw-goal" id="rewardGoal" type="button" data-p="100">🎁</button>
       </div>
       <div class="rw-marks" id="rewardMarks">
         <span style="left:25%">25%</span><span style="left:50%">50%</span><span style="left:75%">75%</span>
@@ -1295,11 +1442,13 @@
       <div class="rw-info" id="rewardInfo" hidden>
         <strong>How reward points work</strong>
         <ul>
-          <li><span>🙂</span><span>Each <b>Nailed it</b> adds 1 point.</span></li>
-          <li><span>🙁</span><span>Each <b>Missed it</b> takes away 1 point.</span></li>
-          <li><span>😐</span><span>Behaviour can change during the day, so you can give a title both 🙂 and 🙁 on the same day. In sections where <b>More points</b> is turned off, that title is marked <b>Working on it</b> — a topic that needs more focus — and every 5 Working on it marks in a week take away 1 point.</span></li>
-          <li><span>🚩</span><span>A day with the Red Line pulled counts as zero.</span></li>
-          <li><span>⭐</span><span><b>Extra points</b> from school test results are added to the week they are entered.</span></li>
+          <li><span>🙂</span><span>Every <b>Nailed it</b> earns 1 point.</span></li>
+          <li><span>🙁</span><span>Every <b>Missed it</b> costs 1 point.</span></li>
+          <li><span>😐</span><span><b>Working on it:</b> a title got both 🙂 and 🙁 in one day. 5 of these in a week = −1 point.</span></li>
+          <li><span>🚩</span><span>Each <b>red flag</b> costs 1 point. A third flag turns the whole day to zero.</span></li>
+          <li><span>⭐</span><span><b>Extra points</b> from school tests count toward what you choose in <b>Counts for</b> — a week, month, school quarter or year.</span></li>
+          <li><span>🎁</span><span>Reach the weekly target to earn the <b>reward</b>. Smaller gifts unlock at 25%, 50% and 75% on the way. Tap a gift to write its prize.</span></li>
+          <li><span>📅</span><span>Totals for a <b>month</b>, <b>school quarter</b> or <b>year</b> appear when that period ends — if it has records.</span></li>
         </ul>
       </div>
     </div>
@@ -1307,16 +1456,23 @@
 
   <section class="extra card" id="extraCard" hidden>
     <div class="ex-head">
-      <h2>Extra points</h2>
+      <button class="ex-toggle" id="extraToggle" type="button" aria-expanded="false" aria-controls="extraBody">
+        Extra points <i class="ex-chev" aria-hidden="true">▾</i>
+      </button>
+      <div class="ex-for" id="extraFor" hidden></div>
       <span class="ex-week" id="extraWeek"></span>
     </div>
+    <div class="ex-body" id="extraBody" hidden>
     <h3 class="ex-title">School test results</h3>
-    <div class="ex-ask" id="extraAsk"></div>
     <p class="ex-note" id="extraNote" hidden></p>
     <div class="ex-table" id="extraTable"></div>
-    <div class="ex-add" id="extraAdd" hidden>
-      <input type="text" id="extraAddName" placeholder="Add a test your school gives" autocomplete="off" maxlength="50">
-      <button class="add-title" id="extraAddBtn" type="button">Add test</button>
+    <div class="ex-foot">
+      <div class="ex-add" id="extraAdd" hidden>
+        <input type="text" id="extraAddName" placeholder="Test name, as on the school report" autocomplete="off" maxlength="50">
+        <button class="add-title" id="extraAddBtn" type="button">Add test</button>
+      </div>
+      <button class="catch-up" id="extraDone" type="button" hidden></button>
+    </div>
     </div>
   </section>
 
@@ -1338,18 +1494,6 @@
         <span class="day-total" id="dayTotal"></span>
         <button class="catch-up" id="catchUpBtn" type="button" hidden>✏️ Missed a day? Catch up</button>
         <button class="titles-btn" id="titlesBtn" type="button" aria-expanded="false">Titles ▾</button>
-      </div>
-
-      <div class="finish-ask" id="finishAsk" hidden>
-        <span class="fa-icon" aria-hidden="true">📝</span>
-        <div class="fa-text">
-          <strong id="finishAskTitle"></strong>
-          <span id="finishAskSub"></span>
-        </div>
-        <div class="fa-btns">
-          <button class="fa-yes" id="finishYes" type="button">✏️ Finish it now</button>
-          <button class="fa-no" id="finishNo" type="button">Leave it as is</button>
-        </div>
       </div>
 
       <div class="titles-menu" id="titlesMenu" hidden>
@@ -1522,13 +1666,15 @@
           if (!d.cleared || typeof d.cleared !== "object") d.cleared = {};
           if (!d.tests || typeof d.tests !== "object") d.tests = {};
           if (!d.notes || typeof d.notes !== "object") d.notes = {};
+          if (!d.done || typeof d.done !== "object") d.done = {};
+          if (!d.prizes || typeof d.prizes !== "object") d.prizes = {};
           if (!d.startedOn) d.startedOn = ymd(new Date());
           return d;
         }
       }
     } catch (e) {}
     return {
-      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {}, tests: {}, notes: {},
+      parents: [], kids: [], points: {}, marks: {}, more: {}, redLine: {}, strikes: {}, reward: {}, cleared: {}, tests: {}, notes: {}, done: {}, prizes: {},
       titles: seedTitles(), startedOn: ymd(new Date())
     };
   }
@@ -1919,6 +2065,19 @@
     save();
   }
 
+  // Whether the chosen earlier day's note is shown in full. Picking a day opens
+  // it; a tap anywhere else — the open note itself too — puts it back to a
+  // preview. Tapping another note or a chart day opens that one instead.
+  var notePeek = true;
+  // pointerup, not click: iPhone Safari sends no click for taps on plain background
+  document.addEventListener("pointerup", function (e) {
+    if (!notePeek || !notesArea || !notesArea.querySelector(".sticky.past.open")) return;
+    var inOpen = e.target.closest && e.target.closest(".sticky.past.open");
+    if (!inOpen && e.target.closest && e.target.closest(".sticky, .day")) return;
+    notePeek = false;
+    renderNotes();
+  });
+
   function renderNotes() {
     if (!notesArea) return;
     var kid = typeof shownKid === "function" ? shownKid() : null;
@@ -1926,6 +2085,8 @@
 
     var hasDay = dayShown();
     var openKey = hasDay ? selectedKey : "";
+    // an earlier day's note shows in full until a tap elsewhere puts it back
+    if (openKey && openKey !== ymd(new Date()) && !notePeek) openKey = "";
     var id = kid.id + "|" + openKey + "|" + ymd(shownMonday);
     var box = notesArea.querySelector(".st-edit");
     // typing in a note: leave the board alone
@@ -2065,15 +2226,16 @@
       var key = ymd(addDays(shownMonday, i));
       var n = noteFor(kid.id, key);
       var isOpen = key === openKey;
-      // this week: a note for every day so far, empty or not (never days to come);
-      // earlier weeks: only the days that have something written
-      var showDay = isCurrentWeek() ? !isFuture(key) : !!n.text;
+      // a note for every day so far, empty or not, in any week (never days to come)
+      var showDay = !isFuture(key);
       if (!showDay && !isOpen) continue;
       if (n.text) count++;
       wall.appendChild(sticky(kid, key, i, n, isOpen));
     }
+    // always a full week's worth of places, so a note keeps its size from Monday to Sunday
+    wall.style.setProperty("--cols", 7 + (wall.querySelector(".sticky.open") ? 1 : 0));
 
-    sub.textContent = count ? plural(count, "note") + " this week" : "";
+    sub.textContent = count ? plural(count, "note") + " this week" : isCurrentWeek() ? "" : "No notes this week";
     if (!wall.children.length) {
       var empty = document.createElement("div");
       empty.className = "st-empty";
@@ -2082,6 +2244,16 @@
     }
     board.appendChild(wall);
     notesArea.appendChild(board);
+
+    // a note cut short says so; tapping it opens the day and the whole note
+    Array.prototype.forEach.call(wall.querySelectorAll(".sticky:not(.open) .st-text"), function (tx) {
+      if (tx.scrollHeight > tx.clientHeight + 2) {
+        var more = document.createElement("span");
+        more.className = "st-more";
+        more.textContent = "Read more";
+        tx.parentNode.appendChild(more);
+      }
+    });
   }
 
   function sticky(kid, key, dayIndex, n, isOpen) {
@@ -2480,6 +2652,7 @@
     rewardState: document.getElementById("rewardState"),
     rewardFill: document.getElementById("rewardFill"),
     rewardGoal: document.getElementById("rewardGoal"),
+    rewardNames: document.getElementById("rewardNames"),
     rewardInfo: document.getElementById("rewardInfo"),
     rewardMarks: document.getElementById("rewardMarks"),
     rewardPm: document.getElementById("rewardPm"),
@@ -2488,8 +2661,23 @@
     picker: document.getElementById("weekPicker"),
     pickerWrap: document.getElementById("weekPickerWrap"),
     pickerEmpty: document.getElementById("weekPickerEmpty"),
-    current: document.getElementById("currentWeekBtn")
+    current: document.getElementById("currentWeekBtn"),
+    tabs: document.getElementById("viewTabs"),
+    period: document.getElementById("periodView"),
+    periodPm: document.getElementById("periodPm"),
+    periodWeeks: document.getElementById("periodWeeks"),
+    periodNote: document.getElementById("periodNote"),
+    periodNoteHead: document.getElementById("periodNoteHead"),
+    periodNoteSub: document.getElementById("periodNoteSub"),
+    periodBody: document.getElementById("periodBody")
   };
+
+  // What the week card shows: one week, or the month, school quarter or year
+  // the week on screen falls in.
+  var view = "week";
+  Array.prototype.forEach.call(week.tabs.querySelectorAll("button"), function (b) {
+    b.addEventListener("click", function () { view = b.dataset.view; renderWeek(); });
+  });
 
   var thisMonday = weekStart(new Date());
   var shownMonday = thisMonday;             // Monday of the week on screen
@@ -2562,7 +2750,8 @@
 
   function pickDay(key) {
     return function () {
-      if (key !== selectedKey) { catchUpKey = null; finishLater = null; }   // opening another day locks the last one again
+      if (key !== selectedKey) catchUpKey = null;   // opening another day locks the last one again
+      notePeek = true;
       selectedKey = key; dayChosen = true; renderWeek();
     };
   }
@@ -2572,9 +2761,17 @@
     fixSelection();
 
     var kid = shownKid();
-    var when = isCurrentWeek() ? "This week" : "Week of " + shortDate(shownMonday);
-    week.title.textContent = kid ? kid.name + " — " + when.charAt(0).toLowerCase() + when.slice(1) : when;
-    week.range.textContent = rangeLabel(shownMonday);
+    if (!kid) view = "week";
+    var vp = view === "week" ? null : viewPeriod();
+    var when = vp ? vp.title : isCurrentWeek() ? "This week" : "Week of " + shortDate(shownMonday);
+    week.title.textContent = kid ? kid.name + " — " + (vp ? when : when.charAt(0).toLowerCase() + when.slice(1)) : when;
+    week.range.textContent = vp ? vp.sub : rangeLabel(shownMonday);
+    week.tabs.hidden = !kid;
+    Array.prototype.forEach.call(week.tabs.querySelectorAll("button"), function (b) {
+      b.classList.toggle("on", b.dataset.view === view);
+      b.setAttribute("aria-selected", b.dataset.view === view ? "true" : "false");
+    });
+    document.body.classList.toggle("period-view", !!vp);
     week.current.classList.toggle("off", isCurrentWeek());
     document.getElementById("weekBar").classList.toggle("no-kid", !kid);
 
@@ -2649,6 +2846,15 @@
         vv.textContent = "🚩 0";
         val.appendChild(vv);
         track.appendChild(val);
+      } else if (tally.flag) {
+        // one or two flags: the points they took, at the top of the column
+        val.classList.add("top");
+        var vf = document.createElement("span");
+        vf.className = "v-void";
+        vf.textContent = "🚩 −" + tally.flag;
+        vf.title = tally.flag === 1 ? "1 flag: 1 point taken away" : tally.flag + " flags: " + tally.flag + " points taken away";
+        val.appendChild(vf);
+        track.appendChild(val);
       }
 
       // a past day of this week with nothing in it gets its catch-up message
@@ -2690,11 +2896,124 @@
 
     var up = tallies.reduce(function (s, t) { return s + t.up; }, 0);
     var down = tallies.reduce(function (s, t) { return s + t.down; }, 0);
+    var flags = tallies.reduce(function (s, t) { return s + t.flag; }, 0);
 
     var soso = tallies.reduce(function (s, t) { return s + t.soso; }, 0);
 
-    renderReward(up, down, soso);
+    renderReward(up, down, soso, flags);
+    renderPeriodView();
     renderExtra();
+  }
+
+  // The first day anything was recorded for this kid, or "".
+  function firstRecord(kidId) {
+    var keys = [];
+    [data.marks, data.redLine, data.strikes].forEach(function (store) {
+      if (store && store[kidId]) keys = keys.concat(Object.keys(store[kidId]));
+    });
+    keys.sort();
+    return keys[0] || "";
+  }
+
+  // The month, school quarter or year around the week on screen.
+  function viewPeriod() {
+    var p = periodFromMonday(view, shownMonday);
+    var r = periodRange(p);
+    var title = view === "month" ? MONTH_NAMES[p.month] + " " + p.year
+      : view === "quarter" ? "School quarter " + (p.q + 1) + " · " + p.sy.replace("-", "–")
+      : String(p.year);
+    return { p: p, range: r, title: title,
+             sub: shortDate(fromYmd(r[0])) + " – " + shortDate(fromYmd(r[1])) +
+                  (view === "quarter" ? "" : " " + p.year) };
+  }
+
+  // Totals for a month, school quarter or year: every day inside it, the
+  // Working on it rule per week, and the extra points that count for it.
+  function renderPeriodView() {
+    var kid = shownKid();
+    week.period.hidden = view === "week" || !kid;
+    if (week.period.hidden) return;
+
+    var vp = viewPeriod(), from = vp.range[0], to = vp.range[1], today = ymd(new Date());
+
+    // A month, school quarter or year is only shown once there is enough data
+    // for all of it: it has ended, and the records reach back to its first week.
+    var name = view === "month" ? "a month" : view === "quarter" ? "a school quarter" : "a year";
+    var label = vp.title;
+    var first = firstRecord(kid.id);
+    var why = "";
+    if (!first || first > to) {
+      why = "Nothing was recorded during " + label + ".";
+    } else if (today <= to) {
+      var left = Math.round((fromYmd(to) - fromYmd(today)) / 86400000) + 1;
+      why = label + " isn't over yet: it ends on " + shortDate(fromYmd(to)) +
+        " (" + (left === 1 ? "1 day" : left + " days") + " left). Its totals will show here then.";
+    } else if (first > ymd(addDays(weekStart(fromYmd(from)), 6))) {
+      why = "Records start on " + shortDate(fromYmd(first)) + ", but " + label + " started on " +
+        shortDate(fromYmd(from)) + ", so its first weeks are missing.";
+    }
+    week.periodNote.hidden = !why;
+    week.periodBody.hidden = !!why;
+    if (why) {
+      week.periodNoteHead.textContent = "Not enough data for " + name + " yet";
+      week.periodNoteSub.textContent = why;
+      return;
+    }
+    var up = 0, down = 0, soso = 0, extra = 0, flags = 0, rows = [];
+    for (var m = weekStart(fromYmd(from)); ymd(m) <= to; m = addDays(m, 7)) {
+      var w = { monday: m, up: 0, down: 0, soso: 0, flag: 0 };
+      for (var i = 0; i < 7; i++) {
+        var key = ymd(addDays(m, i));
+        if (key < from || key > to || key > today) continue;
+        var dt = dayTally(addDays(m, i));
+        w.up += dt.up; w.down += dt.down; w.soso += dt.soso; w.flag += dt.flag;
+      }
+      w.extra = weekBonus(kid.id, m);
+      up += w.up; down += w.down; extra += Math.floor(w.soso / SOSO_PER_SAD); soso += w.soso; flags += w.flag;
+      if (ymd(m) <= today) rows.push(w);
+    }
+    var bonus = periodBonus(kid.id, vp.range, view);
+
+    var taken = down + extra + flags, added = up + bonus, most = Math.max(added, taken, 1);
+    week.periodPm.textContent = "";
+    week.periodPm.appendChild(pmBox("plus", "Added", added ? "+" + added : "0",
+      [], [[bonus, "var(--extra)", "Extra " + pts(bonus), "Extra points"],
+          [up, "var(--good)", "Nailed it " + pts(up), "Nailed it"]], most));
+    week.periodPm.appendChild(pmBox("minus", "Taken away", taken ? "−" + taken : "0",
+      [], takenParts(extra, soso, down, flags), most));
+
+    // newest week first; a tap opens that week
+    week.periodWeeks.textContent = "";
+    rows.reverse().forEach(function (w) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "pd-week";
+      var when = document.createElement("span");
+      when.className = "when";
+      when.textContent = rangeLabel(w.monday);
+      b.appendChild(when);
+      [[w.up, "up", "+"], [w.down + w.flag, "down", "−"], [w.extra, "ex", "⭐ +"]].forEach(function (x) {
+        if (!x[0]) return;
+        var sp = document.createElement("span");
+        sp.className = x[1];
+        sp.textContent = x[2] + x[0];
+        b.appendChild(sp);
+      });
+      if (!w.up && !w.down && !w.flag && !w.extra) {
+        var none = document.createElement("span");
+        none.className = "none";
+        none.textContent = "nothing recorded";
+        b.appendChild(none);
+      }
+      b.addEventListener("click", function () {
+        shownMonday = w.monday;
+        view = "week";
+        dayChosen = false;
+        catchUpKey = null;
+        renderWeek();
+      });
+      week.periodWeeks.appendChild(b);
+    });
   }
 
   // The reward counts 🙂 given, minus 🙁 taken, minus one more 🙁 for every
@@ -2708,7 +3027,38 @@
     return typeof n === "number" && n >= 1 ? n : DEFAULT_TARGET;
   }
 
-  function renderReward(up, down, soso) {
+  // Each quarter of the way, and the finish, can earn its own reward, written
+  // right above its gift. Kept per kid: prizes[kidId]["25" | "50" | "75" | "100"].
+  function rewardGifts() {
+    return Array.prototype.slice.call(week.rewardFill.parentNode.querySelectorAll("[data-p]"));
+  }
+  function prizeFields() {
+    return Array.prototype.slice.call(week.rewardNames.querySelectorAll("input"));
+  }
+
+  // tapping a gift jumps to its reward
+  rewardGifts().forEach(function (g) {
+    g.addEventListener("click", function () {
+      var f = week.rewardNames.querySelector('[data-p="' + g.dataset.p + '"]');
+      if (f && !f.disabled) f.focus();
+    });
+  });
+
+  prizeFields().forEach(function (f) {
+    f.addEventListener("input", function () {
+      var kid = shownKid();
+      if (!kid || !isCurrentWeek()) return;
+      if (!data.prizes[kid.id]) data.prizes[kid.id] = {};
+      var v = f.value.trim();
+      if (v) data.prizes[kid.id][f.dataset.p] = v;
+      else delete data.prizes[kid.id][f.dataset.p];
+      save();
+    });
+    f.addEventListener("keydown", function (e) { if (e.key === "Enter") f.blur(); });
+    f.addEventListener("blur", function () { f.scrollLeft = 0; });
+  });
+
+  function renderReward(up, down, soso, flags) {
     var kid = shownKid();
     if (!kid) { week.reward.hidden = true; return; }
 
@@ -2717,7 +3067,7 @@
     // Only whole groups of five count; the rest wait for the next ones.
     var extra = Math.floor(soso / SOSO_PER_SAD);
     var bonus = weekBonus(kid.id, shownMonday);
-    var net = Math.max(0, up + bonus - down - extra);
+    var net = Math.max(0, up + bonus - down - extra - flags);
     var done = net >= target;
 
     week.reward.hidden = false;
@@ -2729,12 +3079,24 @@
     var pct = Math.min(100, Math.round((net / target) * 100));
     week.rewardFill.style.width = pct + "%";
     week.rewardFill.style.backgroundSize = pct ? (10000 / pct) + "% 100%" : "";
-    week.rewardGoal.className = "rw-goal" + (done ? " lit" : "");
-    var ticks = week.rewardFill.parentNode.querySelectorAll(".rw-tick");
-    [25, 50, 75].forEach(function (p, k) {
+    // a gift at each quarter and at the finish: grey until reached, then lit
+    var prizes = data.prizes[kid.id] || {};
+    rewardGifts().forEach(function (g) {
+      var p = +g.dataset.p;
       var reached = net / target * 100 >= p;
-      week.rewardMarks.children[k].classList.toggle("hit", reached);
-      ticks[k].classList.toggle("hit", reached);
+      var what = prizes[p] || "";
+      var need = Math.ceil(target * p / 100);
+      g.classList.toggle("lit", reached);
+      g.title = (what || (p === 100 ? "Reward" : p + "% reward")) + " · " + pts(need) +
+        (reached ? " — earned!" : "");
+      g.setAttribute("aria-label", g.title);
+      if (p < 100) week.rewardMarks.children[[25, 50, 75].indexOf(p)].classList.toggle("hit", reached);
+
+      var f = week.rewardNames.querySelector('[data-p="' + p + '"]');
+      if (document.activeElement !== f) f.value = what;
+      f.disabled = !isCurrentWeek();
+      f.title = g.title;
+      f.classList.toggle("got", reached && !!what);
     });
 
     week.rewardState.className = "rw-state" + (done ? " done" : "");
@@ -2743,7 +3105,7 @@
     week.rewardState.title = done ? "Reward earned" : "";
 
     // what was added and what was taken away, each with a thin bar on one scale
-    var taken = down + extra;
+    var taken = down + extra + flags;
     var most = Math.max(up, taken, 1);
     week.rewardPm.textContent = "";
     var added = up + bonus;
@@ -2752,8 +3114,14 @@
       [], [[bonus, "var(--extra)", "Extra " + pts(bonus), "Extra points"],
           [up, "var(--good)", "Nailed it " + pts(up), "Nailed it"]], most));
     week.rewardPm.appendChild(pmBox("minus", "Taken away", taken ? "−" + taken : "0",
-      [], [[extra, "#c9922f", growthLabel(soso) + " = " + pts(extra) + " taken away", "Working on it"],
-          [down, "var(--danger)", "Missed it " + pts(down), "Missed it"]], most));
+      [], takenParts(extra, soso, down, flags), most));
+  }
+
+  // The parts of "Taken away": Working on it, Missed it and red flags.
+  function takenParts(extra, soso, down, flags) {
+    return [[extra, "#c9922f", growthLabel(soso) + " = " + pts(extra) + " taken away", "Working on it"],
+            [down, "var(--danger)", "Missed it " + pts(down), "Missed it"],
+            [flags, "#7a1f1f", "🚩 Red flags " + pts(flags), "Red flags"]];
   }
 
   // lines of text, then one thin bar made of [value, colour, hover text] parts laid end to end
@@ -2836,149 +3204,291 @@
 
   /* ---------- extra points: school test results ---------- */
 
-  var US_STATES = [
-    ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],
-    ["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],
-    ["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],
-    ["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],
-    ["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],
-    ["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],
-    ["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],
-    ["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],
-    ["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],
-    ["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]
-  ];
+  // Tests are added by hand, whatever the school gives; each has a fall, winter
+  // and spring result.
+  var WINDOWS = ["Fall", "Winter", "Spring"];
 
-  var SCHOOL_LEVELS = {
-    Elementary: ["VPK", "K", "1", "2", "3", "4", "5"],
-    Middle: ["6", "7", "8"],
-    High: ["9", "10", "11", "12"]
+  // Names of the tests that used to be built in, so scores saved against them
+  // keep their name when moved into the hand-made list.
+  var OLD_TEST_NAMES = {
+    sel: "Star Early Literacy", sread: "Star Reading", smath: "Star Math",
+    ela: "FAST ELA Reading", fmath: "FAST Mathematics", write: "B.E.S.T. Writing",
+    sci: "Statewide Science Assessment", civics: "Civics EOC", alg1: "B.E.S.T. Algebra 1 EOC",
+    bio: "Biology 1 EOC", geo: "B.E.S.T. Geometry EOC", ush: "U.S. History EOC"
   };
-  var GRADE_NAMES = { VPK: "Pre-K (VPK)", K: "Kindergarten" };
-
-  // Built-in test lists, one state at a time. Each test: [id, name, kind, note,
-  // windows it is given in]. Windows are 0 = fall, 1 = winter, 2 = spring.
-  // Florida: FLDOE 2025–26 Statewide Assessment Schedule (FAST PM1–PM3,
-  // B.E.S.T. Writing 4–10, Science 5 & 8, EOCs).
-  var FL_EOC = [0, 1, 2], ALL3 = [0, 1, 2], SPRING = [2];
-  var STATE_TESTS = {
-    FL: {
-      windows: function (grade) {
-        return grade === "VPK"
-          ? [["AP1", "Fall"], ["AP2", "Winter"], ["AP3", "Spring"]]
-          : [["PM1", "Fall"], ["PM2", "Winter"], ["PM3", "Spring"]];
-      },
-      grades: {
-        VPK: [["sel", "Star Early Literacy", "literacy", "FAST · VPK", ALL3]],
-        K:   [["sel", "Star Early Literacy", "literacy", "Reading", ALL3],
-              ["smath", "Star Mathematics", "math", "Math", ALL3]],
-        "1": [["sel", "Star Early Literacy", "literacy", "Reading", [0, 1]],
-              ["sread", "Star Reading", "reading", "Reading · switches from Early Literacy", SPRING],
-              ["smath", "Star Mathematics", "math", "Math", ALL3]],
-        "2": [["sel", "Star Early Literacy", "literacy", "Reading", ALL3],
-              ["sread", "Star Reading", "reading", "Reading", ALL3],
-              ["smath", "Star Mathematics", "math", "Math", ALL3]],
-        "3": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["fmath", "FAST Mathematics", "math", "Math", ALL3]],
-        "4": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
-              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING]],
-        "5": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
-              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
-              ["sci", "Statewide Science Assessment", "science", "Science", SPRING]],
-        "6": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
-              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING]],
-        "7": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
-              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
-              ["civics", "Civics EOC", "social", "End of course", FL_EOC]],
-        "8": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["fmath", "FAST Mathematics", "math", "Math", ALL3],
-              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
-              ["sci", "Statewide Science Assessment", "science", "Science", SPRING],
-              ["alg1", "B.E.S.T. Algebra 1 EOC", "math", "End of course · if taking Algebra 1", FL_EOC]],
-        "9": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-              ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
-              ["alg1", "B.E.S.T. Algebra 1 EOC", "math", "End of course", FL_EOC],
-              ["bio", "Biology 1 EOC", "science", "End of course", FL_EOC]],
-        "10": [["ela", "FAST ELA Reading", "reading", "Reading", ALL3],
-               ["write", "B.E.S.T. Writing", "writing", "Writing", SPRING],
-               ["geo", "B.E.S.T. Geometry EOC", "math", "End of course", FL_EOC],
-               ["bio", "Biology 1 EOC", "science", "End of course", FL_EOC]],
-        "11": [["ush", "U.S. History EOC", "social", "End of course", FL_EOC]],
-        "12": []
-      }
-    }
-  };
-  var DEFAULT_WINDOWS = [["Fall", ""], ["Winter", ""], ["Spring", ""]];
 
   var extraEl = {
     card: document.getElementById("extraCard"),
     week: document.getElementById("extraWeek"),
-    ask: document.getElementById("extraAsk"),
     note: document.getElementById("extraNote"),
     table: document.getElementById("extraTable"),
     add: document.getElementById("extraAdd"),
     addName: document.getElementById("extraAddName"),
-    addBtn: document.getElementById("extraAddBtn")
+    addBtn: document.getElementById("extraAddBtn"),
+    toggle: document.getElementById("extraToggle"),
+    body: document.getElementById("extraBody"),
+    forWhen: document.getElementById("extraFor"),
+    done: document.getElementById("extraDone")
   };
 
-  // tests[kidId] = { state, level, grade,
-  //   custom:  { grade: [ {id, name} ] },
-  //   results: { grade: { testId: { windowIndex: { score, extra, on } } } } }
+  // ✓ Done locks the whole card for this kid; "Make a change" opens it again.
+  extraEl.done.addEventListener("click", function () {
+    var kid = shownKid();
+    if (!kid) return;
+    var t = testsFor(kid.id);
+    t.locked = !t.locked;
+    if (t.locked) { testArm = null; removedTest = null; }
+    save(); renderWeek();
+  });
+
+  // Closed until the header is tapped; the week's total stays in view either way.
+  extraEl.toggle.addEventListener("click", function () {
+    var open = extraEl.body.hidden;
+    extraEl.body.hidden = !open;
+    extraEl.forWhen.hidden = !open;
+    extraEl.toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  // tests[kidId] = { list:    [ {id, name} ],
+  //                  results: { all: { testId: { windowIndex: { score } } } },
+  //                  extraVals: { testId: { windowIndex: points } },
+  //                  countsFor: { kind, year, month, sy, q, monday } }
+  // The extra points are typed once; "Counts for" says which week, month,
+  // school quarter or year their total belongs to. Changing it moves the total.
+  // Older saves sorted tests by state and grade; they are folded into one list.
   function testsFor(kidId) {
-    if (!data.tests[kidId]) data.tests[kidId] = { state: "", level: "", grade: "", custom: {}, results: {} };
+    if (!data.tests[kidId]) data.tests[kidId] = { list: [], results: { all: {} } };
     var t = data.tests[kidId];
-    if (!t.custom) t.custom = {};
     if (!t.results) t.results = {};
+    if (!Array.isArray(t.list)) {
+      var list = [], all = {}, grades = Object.keys(t.results);
+      var custom = t.custom || {};
+      Object.keys(custom).forEach(function (g) {
+        (custom[g] || []).forEach(function (c) {
+          list.push({ id: c.id, name: c.name });
+          if (t.results[g] && t.results[g][c.id]) all[c.id] = t.results[g][c.id];
+        });
+      });
+      grades.forEach(function (g) {
+        Object.keys(t.results[g] || {}).forEach(function (id) {
+          if (!OLD_TEST_NAMES[id]) return;
+          var nid = "x" + uid();
+          var name = OLD_TEST_NAMES[id] + (grades.length > 1 ? " (grade " + g + ")" : "");
+          list.push({ id: nid, name: name });
+          all[nid] = t.results[g][id];
+        });
+      });
+      t.list = list;
+      t.results = { all: all };
+      delete t.state; delete t.level; delete t.grade; delete t.custom;
+    }
+    if (!t.results.all) t.results.all = {};
+
+    // Extra points used to sit next to each score, stamped with a day; each
+    // moves to the week of that day.
+    if (!t.extras && !t.extraVals) {
+      t.extras = {};
+      var all2 = t.results.all;
+      Object.keys(all2).forEach(function (id) {
+        Object.keys(all2[id]).forEach(function (w) {
+          var r = all2[id][w];
+          if (r && r.extra > 0) {
+            var k = "week:" + ymd(weekStart(r.on ? fromYmd(r.on) : new Date()));
+            setExtra(t, k, id, w, r.extra);
+          }
+          if (r) { delete r.extra; delete r.on; tidy(all2, id, w); }
+        });
+      });
+    }
+
+    // For a short while points were kept separately for each period; fold them
+    // into one set, counting for the period that held the most.
+    if (!t.extraVals) {
+      t.extraVals = {};
+      var best = null, bestSum = 0;
+      Object.keys(t.extras).forEach(function (k) {
+        var sum = 0;
+        Object.keys(t.extras[k]).forEach(function (id) {
+          Object.keys(t.extras[k][id]).forEach(function (w) {
+            var n = t.extras[k][id][w] || 0;
+            sum += n;
+            if (!t.extraVals[id]) t.extraVals[id] = {};
+            t.extraVals[id][w] = (t.extraVals[id][w] || 0) + n;
+          });
+        });
+        if (sum > bestSum) { best = k; bestSum = sum; }
+      });
+      if (best && !t.countsFor) t.countsFor = periodFromKey(best);
+      delete t.extras;
+    }
+    if (!t.countsFor) t.countsFor = periodFromMonday("week", thisMonday);
     return t;
   }
 
-  // Extra points typed in during the week that starts on this Monday.
-  function weekBonus(kidId, monday) {
-    var t = data.tests[kidId];
-    if (!t || !t.results) return 0;
-    var from = ymd(monday), to = ymd(addDays(monday, 6)), sum = 0;
-    Object.keys(t.results).forEach(function (g) {
-      Object.keys(t.results[g]).forEach(function (id) {
-        var byWin = t.results[g][id];
-        Object.keys(byWin).forEach(function (w) {
-          var r = byWin[w];
-          if (r && r.extra > 0 && r.on >= from && r.on <= to) sum += r.extra;
-        });
-      });
+  function setExtra(t, id, w, n) {
+    if (n > 0) {
+      if (!t.extraVals[id]) t.extraVals[id] = {};
+      t.extraVals[id][w] = n;
+    } else if (t.extraVals[id]) {
+      delete t.extraVals[id][w];
+      if (!Object.keys(t.extraVals[id]).length) delete t.extraVals[id];
+    }
+  }
+
+  function extraTotal(t) {
+    var sum = 0;
+    Object.keys(t.extraVals).forEach(function (id) {
+      Object.keys(t.extraVals[id]).forEach(function (w) { sum += t.extraVals[id][w] || 0; });
     });
     return sum;
   }
 
-  function testsForGrade(t) {
-    var st = STATE_TESTS[t.state];
-    var list = (st && st.grades[t.grade]) ? st.grades[t.grade].slice() : [];
-    (t.custom[t.grade] || []).forEach(function (c) {
-      list.push([c.id, c.name, "other", "Added by you", ALL3, true]);
-    });
-    return list;
+  // Extra points land only where they were told to count. A week's reward gets
+  // them when they count for that week; a month, school quarter or year view
+  // gets them when they count for it or for a shorter period starting inside it.
+  var PERIOD_SIZE = { week: 0, month: 1, quarter: 2, year: 3 };
+  function periodBonus(kidId, range, kind) {
+    var t = testsFor(kidId), cf = t.countsFor;
+    if (PERIOD_SIZE[cf.kind] > PERIOD_SIZE[kind]) return 0;
+    var start = periodRange(cf)[0];
+    return start >= range[0] && start <= range[1] ? extraTotal(t) : 0;
+  }
+  function weekBonus(kidId, monday) {
+    return periodBonus(kidId, [ymd(monday), ymd(addDays(monday, 6))], "week");
   }
 
-  function selectBox(label, options, value, placeholder, onChange, disabled) {
-    var l = document.createElement("label");
-    l.textContent = label;
-    var s = document.createElement("select");
-    s.disabled = !!disabled;
-    var p = document.createElement("option");
-    p.value = ""; p.textContent = placeholder;
-    s.appendChild(p);
-    options.forEach(function (o) {
-      var op = document.createElement("option");
-      op.value = o[0]; op.textContent = o[1];
-      if (o[0] === value) op.selected = true;
-      s.appendChild(op);
+  // First and last day of a period, as YYYY-MM-DD.
+  function periodRange(p) {
+    if (p.kind === "week") return [p.monday, ymd(addDays(fromYmd(p.monday), 6))];
+    if (p.kind === "month") return [ymd(new Date(p.year, p.month, 1)), ymd(new Date(p.year, p.month + 1, 0))];
+    if (p.kind === "quarter") return SCHOOL_QUARTERS[p.sy][p.q];
+    return [p.year + "-01-01", p.year + "-12-31"];
+  }
+
+  // The period chosen in the header, saved with the kid's tests.
+  var PERIOD_KINDS = [["week", "Week"], ["month", "Month"], ["quarter", "School quarter"], ["year", "Year"]];
+
+  // School quarters are the school's grading periods, from its academic
+  // calendar: first day of school, then the day after each grading period ends.
+  // Each school year: [start, end] of Q1–Q4.
+  var SCHOOL_QUARTERS = {
+    "2026-27": [["2026-08-10", "2026-10-09"], ["2026-10-10", "2026-12-18"],
+                ["2026-12-19", "2027-03-12"], ["2027-03-13", "2027-05-28"]]
+  };
+
+  // The school year and quarter a day falls in; outside every known school
+  // year, the nearest one.
+  function schoolQuarterOf(d) {
+    var key = ymd(d), years = Object.keys(SCHOOL_QUARTERS).sort();
+    for (var i = 0; i < years.length; i++) {
+      var qs = SCHOOL_QUARTERS[years[i]];
+      for (var q = 0; q < 4; q++) {
+        if (key >= qs[q][0] && key <= qs[q][1]) return { sy: years[i], q: q };
+      }
+      // summer before this year's first day belongs to its Q1
+      if (key < qs[0][0]) return { sy: years[i], q: 0 };
+    }
+    return { sy: years[years.length - 1], q: 3 };
+  }
+  function periodFromMonday(kind, monday) {
+    var sq = schoolQuarterOf(monday);
+    return { kind: kind, year: monday.getFullYear(), month: monday.getMonth(),
+             sy: sq.sy, q: sq.q, monday: ymd(monday) };
+  }
+
+  // "week:2026-09-14", "month:2026-09", "quarter:2026-27-Q1" or "year:2026"
+  function periodFromKey(key) {
+    var kind = key.split(":")[0], v = key.slice(kind.length + 1);
+    if (kind === "week") return periodFromMonday("week", fromYmd(v));
+    if (kind === "month") return periodFromMonday("month", mondaysIn(+v.slice(0, 4), +v.slice(5, 7) - 1)[0]);
+    if (kind === "quarter") {
+      var sy = v.slice(0, 7), q = +v.slice(-1) - 1;
+      var p = periodFromMonday("quarter", thisMonday);
+      if (SCHOOL_QUARTERS[sy]) { p.sy = sy; p.q = q; }
+      return p;
+    }
+    return periodFromMonday("year", mondaysIn(+v, 0)[0]);
+  }
+
+  function renderPeriod(p, disabled) {
+    var box = extraEl.forWhen;
+    box.textContent = "";
+    var lab = document.createElement("span");
+    lab.textContent = "Counts for";
+    box.appendChild(lab);
+
+    function sel(cls, label, opts, value, onChange) {
+      var s = document.createElement("select");
+      s.className = cls;
+      s.setAttribute("aria-label", label);
+      s.disabled = disabled;
+      opts.forEach(function (o) {
+        var op = document.createElement("option");
+        op.value = o[0]; op.textContent = o[1];
+        if (String(o[0]) === String(value)) op.selected = true;
+        s.appendChild(op);
+      });
+      s.addEventListener("change", function () { onChange(s.value); save(); renderWeek(); });
+      box.appendChild(s);
+    }
+
+    sel("kind", "Counts for", PERIOD_KINDS, p.kind, function (v) { p.kind = v; });
+
+    if (p.kind === "quarter") {
+      sel("yr", "School year", Object.keys(SCHOOL_QUARTERS).sort().map(function (k) {
+        return [k, k.replace("-", "–")];
+      }), p.sy, function (v) { p.sy = v; });
+      sel("qt", "School quarter", SCHOOL_QUARTERS[p.sy].map(function (r, i) {
+        return [i, "Q" + (i + 1) + " · " + shortDate(fromYmd(r[0])) + " – " + shortDate(fromYmd(r[1]))];
+      }), p.q, function (v) { p.q = +v; });
+      return;
+    }
+
+    var nowYear = new Date().getFullYear(), years = [];
+    for (var y = nowYear - 2; y <= nowYear + 1; y++) years.push([y, String(y)]);
+    if (p.year < nowYear - 2 || p.year > nowYear + 1) years.unshift([p.year, String(p.year)]);
+    sel("yr", "Year", years, p.year, function (v) {
+      p.year = +v; p.monday = ymd(mondaysIn(p.year, p.month)[0]);
     });
-    s.addEventListener("change", function () { onChange(s.value); });
-    l.appendChild(s);
-    return l;
+
+    if (p.kind === "week" || p.kind === "month") {
+      sel("mo", "Month", MONTH_NAMES.map(function (n, i) { return [i, n.slice(0, 3)]; }), p.month, function (v) {
+        p.month = +v; p.monday = ymd(mondaysIn(p.year, p.month)[0]);
+      });
+    }
+    if (p.kind === "week") {
+      sel("wk", "Week", mondaysIn(p.year, p.month).map(function (m) {
+        var sun = addDays(m, 6);
+        return [ymd(m), m.getDate() + "–" + (sun.getMonth() === m.getMonth() ? sun.getDate() : shortDate(sun))];
+      }), p.monday, function (v) { p.monday = v; });
+    }
+  }
+
+  // ✕ on a test asks first (testArm), and what was removed is kept in
+  // `removedTest` until Undo puts it back or the next removal replaces it.
+  var testArm = null, removedTest = null;
+
+  function removeTest(kid, t, test) {
+    var at = t.list.indexOf(test);
+    var gone = { kidId: kid.id, at: at, test: test, results: t.results.all[test.id] || null,
+                 extras: t.extraVals[test.id] || null };
+    delete t.extraVals[test.id];
+    t.list = t.list.filter(function (c) { return c.id !== test.id; });
+    delete t.results.all[test.id];
+    removedTest = gone;
+    testArm = null;
+    save(); renderWeek();
+  }
+
+  function undoRemove() {
+    var g = removedTest;
+    if (!g) return;
+    var t = testsFor(g.kidId);
+    t.list.splice(Math.min(g.at, t.list.length), 0, g.test);
+    if (g.results) t.results.all[g.test.id] = g.results;
+    if (g.extras) t.extraVals[g.test.id] = g.extras;
+    removedTest = null;
+    save(); renderWeek();
   }
 
   function renderExtra() {
@@ -2987,120 +3497,111 @@
     extraEl.card.hidden = false;
 
     var t = testsFor(kid.id);
-    var canEdit = isCurrentWeek();
-    var bonus = weekBonus(kid.id, shownMonday);
+    var canEdit = isCurrentWeek() && !t.locked;
+    extraEl.done.hidden = !isCurrentWeek();
+    extraEl.done.classList.toggle("done", !t.locked);
+    extraEl.done.textContent = t.locked ? "✏️ Make a change" : "✓ Done";
+    extraEl.done.title = t.locked ? "Open the extra points to change them" : "Finished with the extra points — lock them";
+    renderPeriod(t.countsFor, !canEdit);
+    var bonus = extraTotal(t);
     extraEl.week.innerHTML = "";
     extraEl.week.appendChild(document.createTextNode(bonus === 1 ? "Total extra point " : "Total extra points "));
     var b = document.createElement("b");
     b.textContent = bonus ? "+" + bonus : "0";
     extraEl.week.appendChild(b);
 
-    // one question after another: state, then school, then grade
-    extraEl.ask.textContent = "";
-    extraEl.ask.appendChild(selectBox("State", US_STATES, t.state, "Choose a state", function (v) {
-      t.state = v; save(); renderWeek();
-    }, !canEdit));
-    if (t.state) {
-      extraEl.ask.appendChild(selectBox("School", Object.keys(SCHOOL_LEVELS).map(function (k) { return [k, k]; }),
-        t.level, "Choose a school", function (v) {
-          t.level = v;
-          if (SCHOOL_LEVELS[v] && SCHOOL_LEVELS[v].indexOf(t.grade) === -1) t.grade = "";
-          save(); renderWeek();
-        }, !canEdit));
-    }
-    if (t.state && t.level) {
-      extraEl.ask.appendChild(selectBox("Grade", SCHOOL_LEVELS[t.level].map(function (g) {
-        return [g, GRADE_NAMES[g] || "Grade " + g];
-      }), t.grade, "Choose a grade", function (v) {
-        t.grade = v; save(); renderWeek();
-      }, !canEdit));
-    }
-
     extraEl.table.textContent = "";
-    var ready = t.state && t.level && t.grade;
-    extraEl.add.hidden = !ready || !canEdit;
-    extraEl.note.hidden = true;
-    if (!ready) return;
-
-    var st = STATE_TESTS[t.state];
-    var list = testsForGrade(t);
-    if (!st) {
-      extraEl.note.hidden = false;
-      extraEl.note.textContent = "The built-in test list for this state is coming soon. Add the tests your school gives below.";
-    } else if (!list.length) {
-      extraEl.note.hidden = false;
-      extraEl.note.textContent = "No state tests are scheduled for this grade. You can add your own below.";
+    if (removedTest && removedTest.kidId === kid.id && canEdit) {
+      var bar = document.createElement("div");
+      bar.className = "ex-undo";
+      var msg = document.createElement("span");
+      var nb = document.createElement("b");
+      nb.textContent = removedTest.test.name;
+      msg.appendChild(nb);
+      msg.appendChild(document.createTextNode(" was removed."));
+      bar.appendChild(msg);
+      var ub = document.createElement("button");
+      ub.type = "button";
+      ub.textContent = "↩ Undo";
+      ub.addEventListener("click", undoRemove);
+      bar.appendChild(ub);
+      var cb = document.createElement("button");
+      cb.type = "button";
+      cb.className = "x";
+      cb.textContent = "✕";
+      cb.setAttribute("aria-label", "Dismiss");
+      cb.addEventListener("click", function () { removedTest = null; renderWeek(); });
+      bar.appendChild(cb);
+      extraEl.table.appendChild(bar);
     }
-    if (!list.length) return;
+    extraEl.add.hidden = !canEdit;
+    extraEl.note.hidden = t.list.length > 0;
+    extraEl.note.textContent = canEdit
+      ? "No tests yet. Add the ones your child's school gives below."
+      : "No tests were added.";
+    if (!t.list.length) return;
 
-    var wins = st ? st.windows(t.grade) : DEFAULT_WINDOWS;
     var grid = document.createElement("div");
     grid.className = "ex-grid";
-    grid.style.setProperty("--cols", wins.length);
+    grid.style.setProperty("--cols", WINDOWS.length);
 
     var head = document.createElement("div");
     head.className = "ex-row";
-    wins.forEach(function (w) {
+    WINDOWS.forEach(function (w) {
       var c = document.createElement("div");
       c.className = "ex-colhead";
-      c.textContent = w[0];
-      if (w[1]) { var s = document.createElement("small"); s.textContent = w[1]; c.appendChild(s); }
+      c.textContent = w;
       head.appendChild(c);
     });
     grid.appendChild(head);
 
-    var results = t.results[t.grade] || (t.results[t.grade] = {});
-    list.forEach(function (test) {
+    var results = t.results.all;
+    var extras = t.extraVals;
+    t.list.forEach(function (test) {
       var row = document.createElement("div");
       row.className = "ex-row";
-      wins.forEach(function (w, wi) {
+      WINDOWS.forEach(function (w, wi) {
         var cell = document.createElement("div");
-        if (test[4].indexOf(wi) === -1) {
-          cell.className = "ex-cell none";
-          cell.textContent = "Not given";
-          row.appendChild(cell);
-          return;
-        }
-        cell.className = "ex-cell s-" + test[2];
+        cell.className = "ex-cell s-other";
 
         var name = document.createElement("div");
         name.className = "ex-name";
         var nm = document.createElement("span");
-        nm.textContent = test[1];
+        nm.textContent = test.name;
         name.appendChild(nm);
-        if (test[5] && canEdit && wi === 0) {
+        if (canEdit && wi === 0) {
+          var armed = testArm === test.id;
           var x = document.createElement("button");
           x.type = "button";
-          x.textContent = "✕";
-          x.title = "Remove this test";
+          x.className = armed ? "armed" : "";
+          x.textContent = armed ? "Delete?" : "✕";
+          x.title = armed ? "Tap again to delete " + test.name + " and all its scores" : "Remove this test";
+          x.setAttribute("aria-label", x.title);
           x.addEventListener("click", function () {
-            t.custom[t.grade] = (t.custom[t.grade] || []).filter(function (c) { return c.id !== test[0]; });
-            delete results[test[0]];
-            save(); renderWeek();
+            if (armed) removeTest(kid, t, test);
+            else {
+              testArm = test.id;
+              renderWeek();
+              // not confirmed in a few seconds: back to a plain ✕
+              setTimeout(function () { if (testArm === test.id) { testArm = null; renderWeek(); } }, 4000);
+            }
           });
           name.appendChild(x);
         }
         cell.appendChild(name);
 
-        var sub = document.createElement("div");
-        sub.className = "ex-sub";
-        sub.textContent = test[3];
-        cell.appendChild(sub);
-
-        var r = (results[test[0]] && results[test[0]][wi]) || {};
+        var r = (results[test.id] && results[test.id][wi]) || {};
         var ins = document.createElement("div");
         ins.className = "ex-in";
         ins.appendChild(numberField("Score", r.score, !canEdit, function (v) {
-          var rec = record(results, test[0], wi);
+          var rec = record(results, test.id, wi);
           rec.score = v;
-          tidy(results, test[0], wi);
+          tidy(results, test.id, wi);
           save();
         }, false));
-        ins.appendChild(numberField("Extra points", r.extra, !canEdit, function (v) {
-          var rec = record(results, test[0], wi);
-          rec.extra = v;
-          rec.on = ymd(new Date());          // counts toward the week it was typed in
-          tidy(results, test[0], wi);
+        var given = extras[test.id] && extras[test.id][wi];
+        ins.appendChild(numberField("Extra points", given, !canEdit, function (v) {
+          setExtra(t, test.id, wi, v);
           save();
           renderWeek();
         }, true));
@@ -3122,6 +3623,16 @@
     var r = results[id] && results[id][wi];
     if (r && r.score == null && !r.extra) delete results[id][wi];
     if (results[id] && !Object.keys(results[id]).length) delete results[id];
+  }
+
+  var MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
+    "August", "September", "October", "November", "December"];
+
+  function mondaysIn(year, month) {
+    var out = [], d = weekStart(new Date(year, month, 1));
+    if (d.getMonth() !== month) d = addDays(d, 7);
+    for (; d.getMonth() === month && d.getFullYear() === year; d = addDays(d, 7)) out.push(d);
+    return out;
   }
 
   // A number box that saves when the parent leaves it (or presses Enter).
@@ -3168,9 +3679,8 @@
     if (!kid || !isCurrentWeek()) return;
     var t = testsFor(kid.id);
     var v = extraEl.addName.value.trim();
-    if (!v || !t.grade) { extraEl.addName.focus(); return; }
-    if (!t.custom[t.grade]) t.custom[t.grade] = [];
-    t.custom[t.grade].push({ id: "x" + uid(), name: v });
+    if (!v) { extraEl.addName.focus(); return; }
+    t.list.push({ id: "x" + uid(), name: v });
     extraEl.addName.value = "";
     save();
     renderWeek();
@@ -3258,7 +3768,7 @@
 
   // A day is two separate totals: points given (🙂) and points taken (🙁).
   function dayTally(date) {
-    var out = { up: 0, down: 0, soso: 0, marked: false, void: false };
+    var out = { up: 0, down: 0, soso: 0, flag: 0, marked: false, void: false };
     var kid = shownKid();
     if (!kid) return out;
 
@@ -3280,7 +3790,9 @@
       out.down += m.down;
     });
 
-    out.marked = out.up > 0 || out.down > 0 || out.soso > 0;
+    // one or two flags take a point each; the third makes the day zero (above)
+    out.flag = strikesOn(kid.id, key);
+    out.marked = out.up > 0 || out.down > 0 || out.soso > 0 || out.flag > 0;
     return out;
   }
 
@@ -3299,11 +3811,6 @@
     hint: document.getElementById("pickHint"),
     heading: document.getElementById("dayHeading"),
     catchUp: document.getElementById("catchUpBtn"),
-    finishAsk: document.getElementById("finishAsk"),
-    finishAskTitle: document.getElementById("finishAskTitle"),
-    finishAskSub: document.getElementById("finishAskSub"),
-    finishYes: document.getElementById("finishYes"),
-    finishNo: document.getElementById("finishNo"),
     total: document.getElementById("dayTotal"),
     btn: document.getElementById("titlesBtn"),
     menu: document.getElementById("titlesMenu"),
@@ -3380,26 +3887,18 @@
     var d = fromYmd(selectedKey);
     var isToday = selectedKey === ymd(new Date());
 
-    var catching = !isToday && selectedKey === catchUpKey;
-    day.heading.textContent = (isToday ? "Today · " : catching ? "Catching up · " : "") + longDate(d) +
-      (isToday || catching ? "" : "  🔒");
+    // An open day shows ✓ Done to lock it; a locked one offers "Make a change".
+    var open = editable();
+    var changing = selectedKey === catchUpKey;
+    day.heading.textContent = (changing ? "Changing · " : isToday ? "Today · " : "") + longDate(d) +
+      (open ? "" : "  🔒");
 
-    day.catchUp.hidden = !catching;
-    day.catchUp.classList.add("done");
-    day.catchUp.textContent = "✓ Done";
+    day.catchUp.hidden = !kid;
+    day.catchUp.classList.toggle("done", open);
+    day.catchUp.textContent = open ? "✓ Done" : "✏️ Make a change";
+    day.catchUp.title = open ? "Finished with this day — lock it" : "Open this day to change its points";
 
     day.panel.classList.toggle("locked", !marksEditable());
-
-    // An earlier day with titles still unmarked asks to be finished instead of
-    // just sitting there locked.
-    var left = isToday || catching || finishLater === selectedKey ? 0 : unmarkedLeft(selectedKey);
-    day.finishAsk.hidden = !left;
-    if (left) {
-      var dayName = longDate(d).split(" ")[0];
-      day.finishAskTitle.textContent = dayName + " isn't finished yet";
-      day.finishAskSub.textContent = (left === 1 ? "1 title still needs" : left + " titles still need") +
-        " a mark. Want to fill " + (left === 1 ? "it" : "them") + " in now?";
-    }
 
     var sum = dayTally(d);
     day.total.textContent = !kid ? ""
@@ -3407,6 +3906,7 @@
       : sum.marked
         ? [sum.up ? "Nailed it +" + sum.up : "",
            sum.down ? "Missed it -" + sum.down : "",
+           sum.flag ? "🚩 -" + sum.flag : "",
            sum.soso ? growthLabel(sum.soso) : ""
           ].filter(Boolean).join(" · ")
         : "";
@@ -3437,11 +3937,11 @@
     day.redlineSub.textContent =
       strikes >= 3 ? "3 flags — this day counts as zero."
       : voided ? "This day counts as zero."
-      : past && strikes === 1 ? "1 flag was given."
-      : past && strikes === 2 ? "2 flags were given."
-      : strikes === 1 ? "1 flag given. Two more and the day counts as zero."
-      : strikes === 2 ? "2 flags given. One more and the day counts as zero."
-      : "Give a flag for each warning. Three flags and the day counts as zero.";
+      : past && strikes === 1 ? "1 flag was given: 1 point taken away."
+      : past && strikes === 2 ? "2 flags were given: 2 points taken away."
+      : strikes === 1 ? "1 flag: 1 point taken away. Two more and the day counts as zero."
+      : strikes === 2 ? "2 flags: 2 points taken away. One more and the day counts as zero."
+      : "Each flag takes away 1 point. Three flags and the day counts as zero.";
 
     // one press clears every flag (and an older hand-pulled red line)
     // its place is kept while there is nothing to clear, so the flags never shift
@@ -3657,7 +4157,7 @@
     b.disabled = !marksEditable();
     b.title = marksEditable() ? label
       : editable() ? "This day counts as zero — clear the flags to change points"
-      : "Earlier days cannot be changed";
+      : "This day is locked — tap ✏️ Make a change to edit it";
     b.setAttribute("aria-label", label + " — " + title.name);
     b.addEventListener("click", function () { setMark(title, value); });
     return b;
@@ -3683,8 +4183,11 @@
     return was && (was.up || was.down) ? was : null;
   }
 
-  // Only today can be changed. What a past day holds is a record of that day.
-  function editable() { return selectedKey === ymd(new Date()) || selectedKey === catchUpKey; }
+  // Today can be changed until it is marked done; any other day only after
+  // "Make a change" is pressed on it.
+  function editable() {
+    return (selectedKey === ymd(new Date()) && !isDone(selectedKey)) || selectedKey === catchUpKey;
+  }
 
   // A past day of this week that was never filled in can be opened to catch up.
   var catchUpKey = null;
@@ -3694,16 +4197,18 @@
     return !dayTally(fromYmd(key)).marked && !strikesOn(kid.id, key);
   }
 
-  // How many switched-on titles an earlier day still has no mark for. A day
-  // that counts as zero is settled, so it has nothing left.
-  var finishLater = null;                  // the day "Leave it as is" was pressed on
-  function unmarkedLeft(key) {
+  // Today stays open until ✓ Done is pressed. Any day can be opened again with
+  // "Make a change", and ✓ Done locks it once more.
+  function isDone(key) {
     var kid = shownKid();
-    if (!kid || isFuture(key) || key === ymd(new Date()) || isRedLined(kid.id, key)) return 0;
-    var dayMarks = marksFor(kid.id, key, false) || {};
-    return data.titles.filter(function (t) {
-      return t.on && !readMark(dayMarks[t.id]).has;
-    }).length;
+    return !!(kid && data.done[kid.id] && data.done[kid.id][key]);
+  }
+  function setDone(key) {
+    var kid = shownKid();
+    if (!kid) return;
+    if (!data.done[kid.id]) data.done[kid.id] = {};
+    data.done[kid.id][key] = true;
+    save();
   }
 
   // A day that counts as zero keeps its titles locked until the flags are cleared.
@@ -4170,19 +4675,15 @@
     renderWeek();
   });
 
+  // ✓ Done locks the day; "Make a change" opens a locked one again.
   day.catchUp.addEventListener("click", function () {
-    catchUpKey = catchUpKey === selectedKey ? null : selectedKey;
+    if (editable()) {
+      setDone(selectedKey);
+      catchUpKey = null;
+    } else {
+      catchUpKey = selectedKey;
+    }
     renderWeek();
-  });
-
-  day.finishYes.addEventListener("click", function () {
-    catchUpKey = selectedKey;
-    renderWeek();
-  });
-
-  day.finishNo.addEventListener("click", function () {
-    finishLater = selectedKey;
-    renderDay();
   });
 
   day.btn.addEventListener("click", function () {
@@ -4259,6 +4760,7 @@
 
   week.current.addEventListener("click", function () {
     shownMonday = thisMonday;
+    view = "week";
     catchUpKey = null;
     selectedKey = ymd(new Date());
     dayChosen = false;
@@ -4363,6 +4865,8 @@
       if (!data.cleared) data.cleared = {};
       if (!data.tests) data.tests = {};
       if (!data.notes) data.notes = {};
+      if (!data.done) data.done = {};
+      if (!data.prizes) data.prizes = {};
 
       KINDS.forEach(function (kind) { setActive(kind, null); });   // ask again
       save();
