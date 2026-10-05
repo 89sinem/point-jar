@@ -759,6 +759,23 @@
   .catch-up:hover { background: var(--accent); color: #fff; }
   .catch-up.done { background: var(--good); border-color: var(--good); color: #fff; }
   .catch-up[hidden] { display: none; }
+  .finish-ask {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px;
+    margin: -4px 0 16px; padding: 12px 14px; border-radius: 12px;
+    border: 1px dashed var(--accent); background: var(--accent-soft);
+  }
+  .finish-ask[hidden] { display: none; }
+  .finish-ask .fa-icon { font-size: 22px; }
+  .finish-ask .fa-text { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; line-height: 1.35; }
+  .finish-ask .fa-text strong { font-size: 14px; }
+  .finish-ask .fa-text span { font-size: 13px; color: var(--muted); }
+  .finish-ask .fa-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .finish-ask button {
+    border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; font-family: inherit;
+    cursor: pointer; white-space: nowrap;
+  }
+  .finish-ask .fa-yes { border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+  .finish-ask .fa-no { border: 1px solid var(--line, var(--muted)); background: transparent; color: var(--muted); }
   .day-catch {
     position: absolute; left: 6px; right: 6px; top: 50%; transform: translateY(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -1321,6 +1338,18 @@
         <span class="day-total" id="dayTotal"></span>
         <button class="catch-up" id="catchUpBtn" type="button" hidden>✏️ Missed a day? Catch up</button>
         <button class="titles-btn" id="titlesBtn" type="button" aria-expanded="false">Titles ▾</button>
+      </div>
+
+      <div class="finish-ask" id="finishAsk" hidden>
+        <span class="fa-icon" aria-hidden="true">📝</span>
+        <div class="fa-text">
+          <strong id="finishAskTitle"></strong>
+          <span id="finishAskSub"></span>
+        </div>
+        <div class="fa-btns">
+          <button class="fa-yes" id="finishYes" type="button">✏️ Finish it now</button>
+          <button class="fa-no" id="finishNo" type="button">Leave it as is</button>
+        </div>
       </div>
 
       <div class="titles-menu" id="titlesMenu" hidden>
@@ -2533,7 +2562,7 @@
 
   function pickDay(key) {
     return function () {
-      if (key !== selectedKey) catchUpKey = null;   // opening another day locks the last one again
+      if (key !== selectedKey) { catchUpKey = null; finishLater = null; }   // opening another day locks the last one again
       selectedKey = key; dayChosen = true; renderWeek();
     };
   }
@@ -3270,6 +3299,11 @@
     hint: document.getElementById("pickHint"),
     heading: document.getElementById("dayHeading"),
     catchUp: document.getElementById("catchUpBtn"),
+    finishAsk: document.getElementById("finishAsk"),
+    finishAskTitle: document.getElementById("finishAskTitle"),
+    finishAskSub: document.getElementById("finishAskSub"),
+    finishYes: document.getElementById("finishYes"),
+    finishNo: document.getElementById("finishNo"),
     total: document.getElementById("dayTotal"),
     btn: document.getElementById("titlesBtn"),
     menu: document.getElementById("titlesMenu"),
@@ -3356,6 +3390,17 @@
 
     day.panel.classList.toggle("locked", !marksEditable());
 
+    // An earlier day with titles still unmarked asks to be finished instead of
+    // just sitting there locked.
+    var left = isToday || catching || finishLater === selectedKey ? 0 : unmarkedLeft(selectedKey);
+    day.finishAsk.hidden = !left;
+    if (left) {
+      var dayName = longDate(d).split(" ")[0];
+      day.finishAskTitle.textContent = dayName + " isn't finished yet";
+      day.finishAskSub.textContent = (left === 1 ? "1 title still needs" : left + " titles still need") +
+        " a mark. Want to fill " + (left === 1 ? "it" : "them") + " in now?";
+    }
+
     var sum = dayTally(d);
     day.total.textContent = !kid ? ""
       : sum.void ? "🚩 Red Line — this day is zero"
@@ -3386,7 +3431,7 @@
 
     // In an earlier week the Red Line is only a record: it shows up when
     // something happened that day, and has no buttons to press.
-    var past = !isCurrentWeek();
+    var past = !isCurrentWeek() && !editable();
     day.redline.hidden = past && !voided && !strikes;
     day.redline.classList.toggle("on", voided);
     day.redlineSub.textContent =
@@ -3647,6 +3692,18 @@
     var kid = shownKid();
     if (!kid || !isCurrentWeek() || isFuture(key) || key === ymd(new Date())) return false;
     return !dayTally(fromYmd(key)).marked && !strikesOn(kid.id, key);
+  }
+
+  // How many switched-on titles an earlier day still has no mark for. A day
+  // that counts as zero is settled, so it has nothing left.
+  var finishLater = null;                  // the day "Leave it as is" was pressed on
+  function unmarkedLeft(key) {
+    var kid = shownKid();
+    if (!kid || isFuture(key) || key === ymd(new Date()) || isRedLined(kid.id, key)) return 0;
+    var dayMarks = marksFor(kid.id, key, false) || {};
+    return data.titles.filter(function (t) {
+      return t.on && !readMark(dayMarks[t.id]).has;
+    }).length;
   }
 
   // A day that counts as zero keeps its titles locked until the flags are cleared.
@@ -4116,6 +4173,16 @@
   day.catchUp.addEventListener("click", function () {
     catchUpKey = catchUpKey === selectedKey ? null : selectedKey;
     renderWeek();
+  });
+
+  day.finishYes.addEventListener("click", function () {
+    catchUpKey = selectedKey;
+    renderWeek();
+  });
+
+  day.finishNo.addEventListener("click", function () {
+    finishLater = selectedKey;
+    renderDay();
   });
 
   day.btn.addEventListener("click", function () {
